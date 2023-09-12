@@ -6,7 +6,6 @@ go 1.17
 require (
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/gorilla/mux v1.8.0
-	github.com/minhtd5/panther v1.0.1
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.9.3
 	go.elastic.co/apm v1.15.0
