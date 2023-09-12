@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="WEB_MODULE" version="4">
+  <component name="Go" enabled="true" />
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$" />
+    <content url="file://$MODULE_DIR$/vendor/github.com/minhtd5" />
+    <content url="file://$MODULE_DIR$/vendor/gits.eduprj.com.vn/community" />
+    <content url="file://$MODULE_DIR$/vendor/gits.uet.com" />
+    <content url="file://$MODULE_DIR$/vendor/gits.uet.com.vn" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
