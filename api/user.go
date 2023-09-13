@@ -39,7 +39,7 @@ func handlerUserAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := userService.GetByUserName(userRequest.UserName)
+	user, err := userService.GetByUserName(userRequest.UserName, ctx)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			logrus.WithError(err).Errorf("Username %s does not exist", user.UserName)

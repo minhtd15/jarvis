@@ -2,11 +2,11 @@ package api
 
 import (
 	"context"
+	batman "education-website"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/minhtd5/panther"
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/apm/module/apmlogrus"
 	"gopkg.in/yaml.v3"
@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-var userService panther.UserService
+var userService batman.UserService
 
 const (
 	XApiKeyHeader string = "X-Api-Key"
