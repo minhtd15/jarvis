@@ -10,6 +10,16 @@ type userService struct {
 	userStore batman.UserStore
 }
 
+type UserServiceCfg struct {
+	UserStore batman.UserStore
+}
+
+func NewUserService(userServiceCfg UserServiceCfg) *userService {
+	return &userService{
+		userStore: userServiceCfg.UserStore,
+	}
+}
+
 func (u userService) GetByUserName(userName string, ctx context.Context) (*batman.UserResponse, error) {
 	log.Infof("Get user information by UserName")
 

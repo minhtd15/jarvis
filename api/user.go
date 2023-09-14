@@ -1,14 +1,12 @@
 package api
 
 import (
-	"database/sql"
 	education_website "education-website"
 	"education-website/client"
 	"encoding/json"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"go.elastic.co/apm"
 	"io/ioutil"
-	"log"
 	"net/http"
 )
 
@@ -24,7 +22,7 @@ func handlerUserAccount(w http.ResponseWriter, r *http.Request) {
 
 	bodyBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		logrus.WithError(err).Warningf("Error when reading from request")
+		log.WithError(err).Warningf("Error when reading from request")
 		http.Error(w, "Invalid format", 252001)
 		return
 	}
@@ -34,21 +32,26 @@ func handlerUserAccount(w http.ResponseWriter, r *http.Request) {
 	var userRequest client.UserRequest
 	err = json.Unmarshal(bodyBytes, &userRequest)
 	if err != nil {
-		logrus.WithError(err).Warningf("Error when unmarshaling data from request")
+		log.WithError(err).Warningf("Error when unmarshaling data from request")
 		http.Error(w, "Status bad Request", http.StatusBadRequest) // Return a 400 Bad Request error
 		return
 	}
 
-	user, err := userService.GetByUserName(userRequest.UserName, ctx)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			logrus.WithError(err).Errorf("Username %s does not exist", user.UserName)
-			return
-		}
-		logrus.WithError(err).Errorf("Error getting user info: %s", user.UserName)
+	// Make sure userService is initialized and not nil
+	if userService == nil {
+		logger.Errorf("userService is nil")
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("Successful get the user data")
+	// get user's information from database
+	log.Infof("Start to get user's information from database")
+	user, err := userService.GetByUserName(userRequest.UserName, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Username %s does not exist", user.UserName)
+		return
+	}
+
+	log.Infof("Successful get the user data")
 	respondWithJSON(w, http.StatusOK, education_website.CommonResponse{Status: "SUCCESS", Descrition: "Success getting the user data"})
 }

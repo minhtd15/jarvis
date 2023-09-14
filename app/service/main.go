@@ -1,10 +1,12 @@
 package main
 
 import (
-	"database/sql"
 	"education-website/api"
+	"education-website/service"
+	"education-website/store"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
 	"log"
 )
@@ -30,15 +32,28 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
+
+	userService := service.NewUserService(service.UserServiceCfg{
+		UserStore: store.NewUserManagementStore(store.UserManagementStoreCfg{
+			Db: db,
+		}),
+	})
+	cfg.UserService = userService
+
 	log.Printf("Successful connect to database")
 	defer db.Close() // Close the database connection when finished
 
+	apiCfg := api.Config{
+		Server:      cfg.Server,
+		Database:    cfg.Database,
+		UserService: cfg.UserService,
+	}
+	api.Init(apiCfg)
 	// Run the server
 	cfg.Run()
-
 }
 
-func InitDatabase(config api.Config) (*sql.DB, error) {
+func InitDatabase(config api.Config) (*sqlx.DB, error) {
 	// Create a MySQL data source name (DSN) using the configuration
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s:%s)/%s",
@@ -50,7 +65,8 @@ func InitDatabase(config api.Config) (*sql.DB, error) {
 	)
 
 	// Open a database connection
-	db, err := sql.Open("mysql", dsn)
+	logrus.Info("Open a database connection")
+	db, err := sqlx.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
 	}

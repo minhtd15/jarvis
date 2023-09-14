@@ -17,11 +17,11 @@ import (
 	"time"
 )
 
-var userService batman.UserService
-
 const (
 	XApiKeyHeader string = "X-Api-Key"
 )
+
+var userService batman.UserService
 
 func GetLoggerWithContext(ctx context.Context) *log.Entry {
 	log := log.WithFields(apmlogrus.TraceContext(ctx))
@@ -64,6 +64,8 @@ type Config struct {
 	} `yaml:"database"`
 
 	XApiKey string `yaml:"XApiKey"`
+
+	UserService batman.UserService
 }
 
 // NewConfig returns a new decoded Config struct
@@ -167,6 +169,7 @@ func (config Config) Run() {
 
 	// Run the server on a new goroutine
 	go func() {
+		log.Infof("Before Listen and Serve")
 		if err := server.ListenAndServe(); err != nil {
 			if err == http.ErrServerClosed {
 				// Normal interrupt operation, ignore
@@ -176,6 +179,7 @@ func (config Config) Run() {
 		}
 	}()
 
+	log.Printf("After ListenAndServe")
 	// Block on this channel listeninf for those previously defined syscalls assign
 	// to variable so we can let the user know why the server is shutting down
 	interrupt := <-runChan
@@ -199,4 +203,8 @@ func respondWithJSON(w http.ResponseWriter, httpStatusCode int, data interface{}
 	w.WriteHeader(httpStatusCode)
 	w.Write(resp)
 	return
+}
+
+func Init(c Config) {
+	userService = c.UserService
 }

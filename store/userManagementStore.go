@@ -12,6 +12,16 @@ type userManagementStore struct {
 	db *sqlx.DB
 }
 
+type UserManagementStoreCfg struct {
+	Db *sqlx.DB
+}
+
+func NewUserManagementStore(userManagementStoreCfg UserManagementStoreCfg) *userManagementStore {
+	return &userManagementStore{
+		db: userManagementStoreCfg.Db,
+	}
+}
+
 func (u *userManagementStore) GetByUserNameStore(userName string, ctx context.Context) (batman.UserResponse, error) {
 	log.Infof("Get user information by UserName")
 
