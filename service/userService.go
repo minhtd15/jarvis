@@ -20,6 +20,7 @@ func NewUserService(userServiceCfg UserServiceCfg) *userService {
 	}
 }
 
+// hello
 func (u userService) GetByUserName(userName string, ctx context.Context) (*batman.UserResponse, error) {
 	log.Infof("Get user information by UserName")
 
