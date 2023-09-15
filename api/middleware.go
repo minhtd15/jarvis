@@ -1,6 +1,9 @@
 package api
 
-import "net/http"
+import (
+	"net/http"
+	"strings"
+)
 
 func AuthMiddleware(config Config) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -9,6 +12,18 @@ func AuthMiddleware(config Config) func(http.Handler) http.Handler {
 			expectedApiKey := config.XApiKey
 
 			if apiKey != expectedApiKey {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			if strings.Contains(r.URL.Path, "/p/") {
+				// url contains "/p/...", do not need token
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// check whether the token is valid
+			if !validToken(r) {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}

@@ -132,8 +132,8 @@ func NewRouter(config Config) *mux.Router {
 	r := mux.NewRouter()
 	r.Use(AuthMiddleware(config))
 
-	r.PathPrefix("i/v1").Subrouter()
-	r.HandleFunc("/user-verification", handlerUserAccount).Methods(http.MethodGet)
+	subrouter := r.PathPrefix("/i/v1").Subrouter()
+	subrouter.HandleFunc("/user-verification", handlerUserAccount).Methods(http.MethodGet)
 
 	return r
 
