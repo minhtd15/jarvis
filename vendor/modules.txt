@@ -3,6 +3,7 @@
 github.com/armon/go-radix
 # github.com/dgrijalva/jwt-go v3.2.0+incompatible
 ## explicit
+github.com/dgrijalva/jwt-go
 # github.com/elastic/go-licenser v0.3.1
 ## explicit
 github.com/elastic/go-licenser

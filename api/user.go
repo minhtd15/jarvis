@@ -1,8 +1,7 @@
 package api
 
 import (
-	education_website "education-website"
-	"education-website/client"
+	batman "education-website"
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/apm"
@@ -29,7 +28,7 @@ func handlerUserAccount(w http.ResponseWriter, r *http.Request) {
 
 	json.NewDecoder(r.Body)
 	defer r.Body.Close()
-	var userRequest client.UserRequest
+	var userRequest batman.UserRequest
 	err = json.Unmarshal(bodyBytes, &userRequest)
 	if err != nil {
 		log.WithError(err).Warningf("Error when unmarshaling data from request")
@@ -53,5 +52,5 @@ func handlerUserAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Infof("Successful get the user data")
-	respondWithJSON(w, http.StatusOK, education_website.CommonResponse{Status: "SUCCESS", Descrition: "Success getting the user data"})
+	respondWithJSON(w, http.StatusOK, batman.CommonResponse{Status: "SUCCESS", Descrition: "Success getting the user data"})
 }

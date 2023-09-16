@@ -21,7 +21,11 @@ const (
 	XApiKeyHeader string = "X-Api-Key"
 )
 
-var userService batman.UserService
+var (
+	userService batman.UserService
+	authService batman.AuthService
+	jwtService  batman.JwtService
+)
 
 func GetLoggerWithContext(ctx context.Context) *log.Entry {
 	log := log.WithFields(apmlogrus.TraceContext(ctx))
@@ -66,6 +70,8 @@ type Config struct {
 	XApiKey string `yaml:"XApiKey"`
 
 	UserService batman.UserService
+	JwtService  batman.JwtService
+	AuthService batman.AuthService
 }
 
 // NewConfig returns a new decoded Config struct
@@ -132,8 +138,13 @@ func NewRouter(config Config) *mux.Router {
 	r := mux.NewRouter()
 	r.Use(AuthMiddleware(config))
 
-	subrouter := r.PathPrefix("/i/v1").Subrouter()
-	subrouter.HandleFunc("/user-verification", handlerUserAccount).Methods(http.MethodGet)
+	// APIs that do not require token
+	interalRouter := r.PathPrefix("/i/v1").Subrouter()
+	interalRouter.HandleFunc("/user-verification", handlerUserAccount).Methods(http.MethodPost)
+
+	// APIs that require token
+	externalRouter := r.PathPrefix("e/v1").Subrouter()
+	externalRouter.HandleFunc("/login", handlerLoginUser).Methods(http.MethodPost)
 
 	return r
 

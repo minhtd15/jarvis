@@ -2,7 +2,8 @@ package main
 
 import (
 	"education-website/api"
-	"education-website/service"
+	authService2 "education-website/service/authService"
+	"education-website/service/user"
 	"education-website/store"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
@@ -33,12 +34,22 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
-	userService := service.NewUserService(service.UserServiceCfg{
+	userService := user.NewUserService(user.UserServiceCfg{
 		UserStore: store.NewUserManagementStore(store.UserManagementStoreCfg{
 			Db: db,
 		}),
 	})
 	cfg.UserService = userService
+
+	jwtService := authService2.NewJwtService(authService2.JwtServiceCfg{
+		SecretKey: cfg.XApiKey,
+	})
+	cfg.JwtService = jwtService
+
+	authService := authService2.NewAuthService(authService2.AuthServiceCfg{
+		JwtService: jwtService,
+	})
+	cfg.AuthService = authService
 
 	log.Printf("Successful connect to database")
 	defer db.Close() // Close the database connection when finished

@@ -16,7 +16,7 @@ func AuthMiddleware(config Config) func(http.Handler) http.Handler {
 				return
 			}
 
-			if strings.Contains(r.URL.Path, "/p/") {
+			if strings.Contains(r.URL.Path, "/public/") {
 				// url contains "/p/...", do not need token
 				next.ServeHTTP(w, r)
 				return
