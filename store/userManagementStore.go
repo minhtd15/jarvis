@@ -26,10 +26,10 @@ func (u *userManagementStore) GetByUserNameStore(userName string, ctx context.Co
 	log.Infof("Get user information by UserName")
 
 	entity := batman.UserResponse{}
-	sqlQuery := "SELECT * FROM USER WHERE USER_NAME = ?"
+	sqlQuery := "SELECT * FROM USER WHERE USERNAME = ?"
 
 	// execute sql query
-	err := u.db.QueryRowxContext(ctx, sqlQuery, userName).Scan(&entity.UserId, &entity.UserName, &entity.DOB, &entity.JobPosition)
+	err := u.db.QueryRowxContext(ctx, sqlQuery, userName).Scan(&entity.UserId, &entity.UserName, &entity.Email, &entity.Role, &entity.DOB, &entity.StartDate, &entity.JobPosition, &entity.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.WithError(err).Errorf("Cannot find user with user name: %s", userName)

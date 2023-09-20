@@ -1,6 +1,6 @@
 server:
   host: 127.0.0.1
-  port: 8080
+  port: 8081
   timeout:
     server: "30s"
     read: "15s"
@@ -14,4 +14,4 @@ database:
   port: 3306
   user: root
   pass: tongminh1510
-  dbname: EDUDBTEST
+  dbName: EDUDBTEST

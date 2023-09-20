@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/apm/module/apmlogrus"
 	"gopkg.in/yaml.v3"
@@ -139,12 +140,21 @@ func NewRouter(config Config) *mux.Router {
 	r.Use(AuthMiddleware(config))
 
 	// APIs that do not require token
-	interalRouter := r.PathPrefix("/i/v1").Subrouter()
-	interalRouter.HandleFunc("/user-verification", handlerUserAccount).Methods(http.MethodPost)
+	internalRouter := r.PathPrefix("/i/v1").Subrouter()
+	internalRouter.HandleFunc("/user-verification", handlerUserAccount).Methods(http.MethodPost)
 
 	// APIs that require token
-	externalRouter := r.PathPrefix("e/v1").Subrouter()
-	externalRouter.HandleFunc("/login", handlerLoginUser).Methods(http.MethodPost)
+	externalRouter := r.PathPrefix("/e/v1").Subrouter()
+	externalRouter.HandleFunc("/login-verification", handlerLoginUser).Methods(http.MethodPost)
+
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"http://localhost:3000"},
+		AllowedMethods: []string{"POST"},
+		AllowedHeaders: []string{"Content-Type", "Authorization"},
+	})
+
+	// Áp dụng middleware CORS cho router chính
+	_ = c.Handler(r)
 
 	return r
 
@@ -218,4 +228,6 @@ func respondWithJSON(w http.ResponseWriter, httpStatusCode int, data interface{}
 
 func Init(c Config) {
 	userService = c.UserService
+	authService = c.AuthService
+	jwtService = c.JwtService
 }

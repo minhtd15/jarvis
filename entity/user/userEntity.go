@@ -1,8 +1,8 @@
 package user
 
 type UserEntity struct {
-	UserId       string `db:"user_id"`
-	UserName     string `db:"user_name"`
+	UserId       string `db:"ID"`
+	UserName     string `db:"USERNAME"`
 	Email        string `db:"email"`
 	Role         string `db:"Role"`
 	DOB          string `db:"dob"`

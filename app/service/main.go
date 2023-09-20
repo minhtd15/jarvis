@@ -57,11 +57,14 @@ func main() {
 	apiCfg := api.Config{
 		Server:      cfg.Server,
 		Database:    cfg.Database,
+		XApiKey:     cfg.XApiKey,
 		UserService: cfg.UserService,
+		JwtService:  cfg.JwtService,
+		AuthService: cfg.AuthService,
 	}
 	api.Init(apiCfg)
 	// Run the server
-	cfg.Run()
+	apiCfg.Run()
 }
 
 func InitDatabase(config api.Config) (*sqlx.DB, error) {

@@ -22,12 +22,11 @@ func AuthMiddleware(config Config) func(http.Handler) http.Handler {
 				return
 			}
 
-			// check whether the token is valid
-			if !validToken(r) {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-
+			//// check whether the token is valid
+			//if !validToken(r) {
+			//	http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			//	return
+			//}
 			// If xapikey is valid, continue
 			next.ServeHTTP(w, r)
 		})
