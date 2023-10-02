@@ -71,20 +71,19 @@ func handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 			"token": generatedToken,
 		}
 
+		response := map[string]interface{}{
+			"message": "Đăng nhập thành công",
+			"data":    userInfoWithToken,
+		}
+
 		// Trả về thông tin người dùng cùng với token
 		// Trả về phản hồi JSON
 		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(userInfoWithToken)
+		json.NewEncoder(w).Encode(response)
 	} else {
 		// return cannot find user
 		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode("Invalid password or username")
 	}

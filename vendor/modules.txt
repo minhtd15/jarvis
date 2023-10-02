@@ -91,6 +91,10 @@ go.elastic.co/apm/module/apmlogrus
 # go.elastic.co/fastjson v1.1.0
 ## explicit; go 1.14
 go.elastic.co/fastjson
+# golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413
+## explicit; go 1.11
+golang.org/x/crypto/bcrypt
+golang.org/x/crypto/blowfish
 # golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5
 ## explicit; go 1.11
 golang.org/x/lint

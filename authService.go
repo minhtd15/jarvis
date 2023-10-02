@@ -3,9 +3,22 @@ package education_website
 import (
 	api_request "education-website/api/request"
 	"education-website/entity/user"
+	"errors"
+	"time"
 )
 
-type jwtResponse struct {
+type Payload struct {
+	Username  string    `json:"username"`
+	Role      string    `json:"role"`
+	IssuedAt  time.Time `json:"issued_at"`
+	ExpiredAt time.Time `json:"expired_at"`
+}
+
+func (p Payload) Valid() error {
+	if time.Now().After(p.ExpiredAt) {
+		return errors.New("Token has expired")
+	}
+	return nil
 }
 
 type AuthService interface {
@@ -14,4 +27,5 @@ type AuthService interface {
 
 type JwtService interface {
 	GenerateToken(userEntity user.UserEntity) string
+	ValidateToken(token string) (*Payload, error)
 }

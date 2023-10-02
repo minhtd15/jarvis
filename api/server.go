@@ -23,9 +23,10 @@ const (
 )
 
 var (
-	userService batman.UserService
-	authService batman.AuthService
-	jwtService  batman.JwtService
+	userService  batman.UserService
+	authService  batman.AuthService
+	jwtService   batman.JwtService
+	classService batman.ClassService
 )
 
 func GetLoggerWithContext(ctx context.Context) *log.Entry {
@@ -134,30 +135,30 @@ func ParseFlags() (string, error) {
 }
 
 // NewRouter generates the router used in the HTTP Server
-func NewRouter(config Config) *mux.Router {
+func NewRouter(config Config) http.Handler {
 	// Create router and define routes and return that router
 	r := mux.NewRouter()
-	r.Use(AuthMiddleware(config))
+	r.Use(AuthMiddleware())
 
 	// APIs that do not require token
 	internalRouter := r.PathPrefix("/i/v1").Subrouter()
 	internalRouter.HandleFunc("/user-verification", handlerUserAccount).Methods(http.MethodPost)
+	internalRouter.HandleFunc("/change-password", handleChangePassword).Methods(http.MethodPut)
+	//internalRouter.HandleFunc("/salary-info", handlerSalaryInformation).Methods(http.MethodGet)
 
 	// APIs that require token
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()
 	externalRouter.HandleFunc("/login-verification", handlerLoginUser).Methods(http.MethodPost)
+	externalRouter.HandleFunc("/register", handlerRegisterUser).Methods(http.MethodPost)
+	internalRouter.HandleFunc("/class-information", handleGetClassInformation).Methods(http.MethodGet)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000"},
-		AllowedMethods: []string{"POST"},
-		AllowedHeaders: []string{"Content-Type", "Authorization"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
 	})
 
-	// Áp dụng middleware CORS cho router chính
-	_ = c.Handler(r)
-
-	return r
-
+	handler := c.Handler(r)
+	return handler
 }
 
 // Run will run the HTTP Server

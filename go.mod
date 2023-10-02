@@ -12,6 +12,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	go.elastic.co/apm v1.15.0
 	go.elastic.co/apm/module/apmlogrus v1.15.0
+	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413
 	gopkg.in/yaml.v3 v3.0.1
 )
 

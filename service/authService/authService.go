@@ -4,6 +4,7 @@ import (
 	batman "education-website"
 	"education-website/api/request"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type authService struct {
@@ -21,11 +22,10 @@ func NewAuthService(authServiceCfg AuthServiceCfg) *authService {
 }
 
 func (a authService) VerifyUser(userLoginRequest request.LoginRequest, userEntity batman.UserResponse) (interface{}, error) {
-	// this service is used to check the login password similar with the password on database
-	if userLoginRequest.UserName == userEntity.UserName && userLoginRequest.Password == userEntity.Password {
-		// Trả về thông tin người dùng sau khi xác thực thành công.
+
+	if userLoginRequest.Email == userEntity.Email && bcrypt.CompareHashAndPassword([]byte(userEntity.Password), []byte(userLoginRequest.Password)) != nil {
 		userInfo := map[string]interface{}{
-			"username": userLoginRequest.UserName,
+			"username": userLoginRequest.Email,
 			"role":     "user",
 		}
 		return userInfo, nil

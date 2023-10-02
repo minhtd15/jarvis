@@ -1,33 +1,38 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"strings"
 )
 
-func AuthMiddleware(config Config) func(http.Handler) http.Handler {
+func AuthMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			apiKey := r.Header.Get(XApiKeyHeader)
-			expectedApiKey := config.XApiKey
-
-			if apiKey != expectedApiKey {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-
-			if strings.Contains(r.URL.Path, "/public/") {
+			if strings.Contains(r.URL.Path, "/e/") {
 				// url contains "/p/...", do not need token
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			//// check whether the token is valid
-			//if !validToken(r) {
-			//	http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			//	return
-			//}
-			// If xapikey is valid, continue
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			tokenString := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+			claims, err := jwtService.ValidateToken(tokenString)
+			if err != nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			// check whether the token is valid
+			ctx := context.WithValue(r.Context(), "username", claims.Username)
+			ctx = context.WithValue(ctx, "role", claims.Role)
+			r = r.WithContext(ctx)
+
 			next.ServeHTTP(w, r)
 		})
 	}
