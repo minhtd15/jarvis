@@ -1,11 +1,12 @@
 package salary
 
-import "time"
-
 type SalaryEntity struct {
-	SalaryId   int        `db:"SALARY_ID"`
-	EmployeeId string     `db:"EMPLOYEE_ID"`
-	Month      time.Month `db:"MONTH"`
-	TypeJobId  int        `db:"TYPE_JOB_ID"`
-	WorkDays   int        `db:"WORD_DAYS"`
+	UserName           string  `db:"USERNAME"`
+	FullName           string  `db:"FULLNAME"`
+	Gender             string  `db:"GENDER"`
+	JobPosition        string  `db:"JOB_POSITION"`
+	TypeWork           string  `db:"TYPE_PAYROLL"`
+	TotalWorkDates     int64   `db:"TOTAL_WORK_DATES"`
+	PayrollPerSessions float64 `db:"INCOME"`
+	TotalSalary        float64 `db:"SALARY"`
 }

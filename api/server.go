@@ -144,13 +144,14 @@ func NewRouter(config Config) http.Handler {
 	internalRouter := r.PathPrefix("/i/v1").Subrouter()
 	internalRouter.HandleFunc("/user-verification", handlerUserAccount).Methods(http.MethodPost)
 	internalRouter.HandleFunc("/change-password", handleChangePassword).Methods(http.MethodPut)
-	//internalRouter.HandleFunc("/salary-info", handlerSalaryInformation).Methods(http.MethodGet)
+	internalRouter.HandleFunc("/salary-info", handlerSalaryInformation).Methods(http.MethodGet)
+	internalRouter.HandleFunc("/modify-salary-configuration", handleModifySalaryConfiguration).Methods(http.MethodPut)
 
 	// APIs that require token
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()
 	externalRouter.HandleFunc("/login-verification", handlerLoginUser).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/register", handlerRegisterUser).Methods(http.MethodPost)
-	internalRouter.HandleFunc("/class-information", handleGetClassInformation).Methods(http.MethodGet)
+	//internalRouter.HandleFunc("/class-information", handleGetClassInformation).Methods(http.MethodGet)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000"},

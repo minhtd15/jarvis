@@ -33,7 +33,7 @@ func handlerRegisterUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check whether the user exists in database
-	userExistence, err := userService.GetByUserName(registerRequest.UserName, registerRequest.Email, ctx)
+	userExistence, err := userService.GetByUserName(registerRequest.UserName, registerRequest.Email, "", ctx)
 	if err != nil {
 		log.WithError(err).Warningf("Error when get user data by username")
 		http.Error(w, "Status internal Request", http.StatusInternalServerError)

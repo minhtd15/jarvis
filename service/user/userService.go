@@ -27,11 +27,11 @@ func NewUserService(userServiceCfg UserServiceCfg) batman.UserService {
 	}
 }
 
-func (u userService) GetByUserName(userName string, email string, ctx context.Context) (*batman.UserResponse, error) {
+func (u userService) GetByUserName(userName string, email string, userId string, ctx context.Context) (*batman.UserResponse, error) {
 	log.Infof("Get user information by UserName")
 
 	// init store user in here
-	rs, err := u.userStore.GetByUserNameStore(userName, email, ctx)
+	rs, err := u.userStore.GetByUserNameStore(userName, email, userId, ctx)
 	if err != nil {
 		log.WithError(err).Errorf("Error getting user information from database")
 		return nil, err
@@ -44,7 +44,7 @@ func (u userService) GetUserNamePassword(userLoginInfo api_request.LoginRequest,
 	log.Infof("verify user information after user press sign in button")
 
 	// init store user here
-	rs, err := u.userStore.GetByUserNameStore("", userLoginInfo.Email, ctx)
+	rs, err := u.userStore.GetByUserNameStore("", userLoginInfo.Email, "", ctx)
 	if err != nil {
 		log.WithError(err).Errorf("Error getting user information from database")
 		return nil, err
@@ -70,6 +70,8 @@ func (u userService) InsertNewUser(userRegisterInfo api_request.RegisterRequest,
 		StartingDate: time.Now().Format("2006-01-02"),
 		JobPosition:  "Undefined",
 		Password:     string(hashedPassword),
+		Gender:       userRegisterInfo.Gender,
+		FullName:     userRegisterInfo.FullName,
 	}
 
 	err = u.userStore.InsertNewUserStore(newUser, ctx)
@@ -110,7 +112,7 @@ func (u userService) ChangePassword(changePasswordRequest api_request.ChangePass
 func (u userService) VerifyChangePassword(oldPassword string, userName string, ctx context.Context) error {
 	log.Info("Compare password in database")
 
-	oldPasswordEntity, err := u.userStore.GetByUserNameStore(userName, "", ctx)
+	oldPasswordEntity, err := u.userStore.GetByUserNameStore(userName, "", "", ctx)
 	if err != nil {
 		log.WithError(err).Errorf("unable to get password from database")
 		return err
@@ -126,13 +128,58 @@ func (u userService) VerifyChangePassword(oldPassword string, userName string, c
 	return nil
 }
 
-func (u userService) GetSalaryInformation(userName string, month string, year string) (*api_response.SalaryResponse, error) {
+func (u userService) GetSalaryInformation(userName string, month string, year string, ctx context.Context) ([]*api_response.SalaryAPIResponse, error) {
 	log.Infof("Get salary information for user %s", userName)
 
-	salaryEntity, err := u.userStore.GetSalaryReportStore(userName, month, year)
+	userSalaryReport, err := u.userStore.GetSalaryReportStore(userName, month, year, ctx)
 	if err != nil {
 		log.WithError(err).Errorf("Unable to get salary report for user %s", userName)
 		return nil, err
 	}
 
+	res := make([]*api_response.SalaryAPIResponse, 0) // This is response body
+	check := make(map[string]bool)                    // variable is used to check whether userId exists in response
+	for _, repoRes := range userSalaryReport {
+		if !check[repoRes.UserName] {
+			check[repoRes.UserName] = true
+			x := api_response.SalaryAPIResponse{
+				UserName:    userName,
+				FullName:    repoRes.FullName,
+				Gender:      repoRes.Gender,
+				JobPosition: repoRes.JobPosition,
+			}
+
+			salaryInfo := make([]api_response.SalaryInformation, 0)
+			info := api_response.SalaryInformation{
+				CourseType: repoRes.TypeWork,
+				WorkDays:   repoRes.TotalWorkDates,
+				PriceEach:  repoRes.PayrollPerSessions,
+				Amount:     repoRes.TotalSalary,
+			}
+			salaryInfo = append(salaryInfo, info)
+			x.Salary = salaryInfo
+			res = append(res, &x)
+		} else {
+			for i := range res {
+				if res[i].UserName == repoRes.UserName {
+					salary := res[i].Salary
+					info := api_response.SalaryInformation{
+						CourseType: repoRes.TypeWork,
+						WorkDays:   repoRes.TotalWorkDates,
+						PriceEach:  repoRes.PayrollPerSessions,
+						Amount:     repoRes.TotalSalary,
+					}
+					salary = append(salary, info)
+					res[i].Salary = salary
+				}
+			}
+		}
+	}
+
+	return res, nil
+
+}
+
+func (u userService) ModifySalaryConfiguration(userSalaryInfo api_request.ModifySalaryConfRequest, ctx context.Context) error {
+	return u.userStore.ModifySalaryConfigurationStore(userSalaryInfo.UserId, userSalaryInfo.NewSalaryList, ctx)
 }

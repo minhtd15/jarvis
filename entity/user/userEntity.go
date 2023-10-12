@@ -9,4 +9,6 @@ type UserEntity struct {
 	JobPosition  string `db:"job_position"`
 	StartingDate string `db:"starting_date"`
 	Password     string `db:"password"`
+	Gender       string `db:"gender"`
+	FullName     string `db:"full_name"`
 }
