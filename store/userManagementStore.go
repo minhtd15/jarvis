@@ -92,9 +92,9 @@ func (u *userManagementStore) GetSalaryReportStore(userName string, month string
 
 	var sqlQuery string
 	if userName == "" {
-		sqlQuery = "select u.USERNAME, u.FULLNAME, u.GENDER, u.JOB_POSITION, s.TYPE_PAYROLL, s.TOTAL_WORK_DATES, s.PAYROLL_RATE, s.SALARY from SALARY s  join USER u ON s.USER_ID = u.USER_ID WHERE s.MONTH = ?  and s.YEAR = ?"
+		sqlQuery = "select u.USERNAME, u.FULLNAME, u.GENDER, u.JOB_POSITION, s.PAYROLL_ID, s.TYPE_PAYROLL, s.TOTAL_WORK_DATES, s.PAYROLL_RATE, s.SALARY from SALARY s  join USER u ON s.USER_ID = u.USER_ID WHERE s.MONTH = ?  and s.YEAR = ?"
 	} else {
-		sqlQuery = "select u.USERNAME, u.FULLNAME, u.GENDER, u.JOB_POSITION, s.TYPE_PAYROLL, s.TOTAL_WORK_DATES, s.PAYROLL_RATE, s.SALARY from SALARY s  join USER u ON s.USER_ID = u.USER_ID WHERE s.MONTH = ?  and s.YEAR = ? AND u.USERNAME LIKE CONCAT('%', ?, '%')"
+		sqlQuery = "select u.USERNAME, u.FULLNAME, u.GENDER, u.JOB_POSITION, s.PAYROLL_ID, s.TYPE_PAYROLL, s.TOTAL_WORK_DATES, s.PAYROLL_RATE, s.SALARY from SALARY s  join USER u ON s.USER_ID = u.USER_ID WHERE s.MONTH = ?  and s.YEAR = ? AND u.FULLNAME LIKE CONCAT('%', ?, '%');"
 	}
 	rows, err := u.db.QueryxContext(ctx, sqlQuery, month, year, userName)
 	if err != nil {

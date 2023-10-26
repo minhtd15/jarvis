@@ -71,9 +71,10 @@ type Config struct {
 
 	XApiKey string `yaml:"XApiKey"`
 
-	UserService batman.UserService
-	JwtService  batman.JwtService
-	AuthService batman.AuthService
+	UserService  batman.UserService
+	JwtService   batman.JwtService
+	AuthService  batman.AuthService
+	ClassService batman.ClassService
 }
 
 // NewConfig returns a new decoded Config struct
@@ -146,11 +147,14 @@ func NewRouter(config Config) http.Handler {
 	internalRouter.HandleFunc("/change-password", handleChangePassword).Methods(http.MethodPut)
 	internalRouter.HandleFunc("/salary-info", handlerSalaryInformation).Methods(http.MethodGet)
 	internalRouter.HandleFunc("/modify-salary-configuration", handleModifySalaryConfiguration).Methods(http.MethodPut)
+	internalRouter.HandleFunc("/new-class", handleInsertNewClass).Methods(http.MethodPost)
 
 	// APIs that require token
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()
 	externalRouter.HandleFunc("/login-verification", handlerLoginUser).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/register", handlerRegisterUser).Methods(http.MethodPost)
+	externalRouter.HandleFunc("/excel-export", handleExcelSalary).Methods(http.MethodPost)
+	externalRouter.HandleFunc("/class-info", handleGetClassInformation).Methods(http.MethodGet)
 	//internalRouter.HandleFunc("/class-information", handleGetClassInformation).Methods(http.MethodGet)
 
 	c := cors.New(cors.Options{
@@ -232,4 +236,5 @@ func Init(c Config) {
 	userService = c.UserService
 	authService = c.AuthService
 	jwtService = c.JwtService
+	classService = c.ClassService
 }

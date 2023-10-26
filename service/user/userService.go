@@ -8,7 +8,9 @@ import (
 	"education-website/entity/user"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"github.com/xuri/excelize/v2"
 	"golang.org/x/crypto/bcrypt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -143,7 +145,7 @@ func (u userService) GetSalaryInformation(userName string, month string, year st
 		if !check[repoRes.UserName] {
 			check[repoRes.UserName] = true
 			x := api_response.SalaryAPIResponse{
-				UserName:    userName,
+				UserName:    repoRes.UserName,
 				FullName:    repoRes.FullName,
 				Gender:      repoRes.Gender,
 				JobPosition: repoRes.JobPosition,
@@ -182,4 +184,30 @@ func (u userService) GetSalaryInformation(userName string, month string, year st
 
 func (u userService) ModifySalaryConfiguration(userSalaryInfo api_request.ModifySalaryConfRequest, ctx context.Context) error {
 	return u.userStore.ModifySalaryConfigurationStore(userSalaryInfo.UserId, userSalaryInfo.NewSalaryList, ctx)
+}
+
+func ExportToExcel(data []api_response.SalaryAPIResponse) (*excelize.File, error) {
+	file := excelize.NewFile()
+
+	for index, item := range data {
+		// Điều chỉnh index để bắt đầu từ dòng 2 (dòng tiêu đề ở dòng 1)
+		row := index + 2
+
+		// Ghi dữ liệu vào các ô trong tệp Excel
+		file.SetCellValue("Sheet1", "A"+strconv.Itoa(row), item.UserName)
+		file.SetCellValue("Sheet1", "B"+strconv.Itoa(row), item.FullName)
+		file.SetCellValue("Sheet1", "C"+strconv.Itoa(row), item.Gender)
+		file.SetCellValue("Sheet1", "D"+strconv.Itoa(row), item.JobPosition)
+
+		// Ghi dữ liệu SalaryInformation vào các cột tương ứng
+		for i, salaryInfo := range item.Salary {
+			col := string('E' + i)
+			file.SetCellValue("Sheet1", col+strconv.Itoa(row), salaryInfo.CourseType)
+			file.SetCellValue("Sheet1", col+strconv.Itoa(row+1), salaryInfo.WorkDays)
+			file.SetCellValue("Sheet1", col+strconv.Itoa(row+2), salaryInfo.PriceEach)
+			file.SetCellValue("Sheet1", col+strconv.Itoa(row+3), salaryInfo.Amount)
+		}
+	}
+
+	return file, nil
 }

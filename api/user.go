@@ -3,8 +3,12 @@ package api
 import (
 	batman "education-website"
 	api_request "education-website/api/request"
+	api_response "education-website/api/response"
+	"education-website/service/user"
 	"encoding/json"
+	"fmt"
 	log "github.com/sirupsen/logrus"
+	_ "github.com/xuri/excelize/v2"
 	"go.elastic.co/apm"
 	"io/ioutil"
 	"net/http"
@@ -144,7 +148,7 @@ func handleModifySalaryConfiguration(w http.ResponseWriter, r *http.Request) {
 	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle get salary information")
 	logger.Infof("Handle user account")
 
-	keys := r.URL.Query() // this variable is used for searching engine for leader
+	//keys := r.URL.Query() // this variable is used for searching engine for leader
 	role, ok := r.Context().Value("role").(string)
 	if !ok {
 		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
@@ -178,5 +182,44 @@ func handleModifySalaryConfiguration(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 	} else {
 
+	}
+}
+
+func handleExcelSalary(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle get salary information")
+	logger.Infof("Handle user account")
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	var data []api_response.SalaryAPIResponse
+	err = json.Unmarshal(bodyBytes, &data)
+	if err != nil {
+		log.WithError(err).Warningf("Error when unmarshaling data from request")
+		http.Error(w, "Status bad Request", http.StatusBadRequest) // Return a 400 Bad Request error
+		return
+	}
+
+	excelFile, err := user.ExportToExcel(data)
+	if err != nil {
+		http.Error(w, "Failed to create Excel file", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	w.Header().Set("Content-Disposition", "attachment; filename=output.xlsx")
+
+	// Save the Excel file to the response writer
+	if err := excelFile.Write(w); err != nil {
+		fmt.Println("Error:", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 }

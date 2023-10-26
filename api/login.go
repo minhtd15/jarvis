@@ -53,6 +53,7 @@ func handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 	// if the username exist and the password is true, generate token to send back to backend
 	if checkPasswordSimilarity != nil {
 		generatedToken := jwtService.GenerateToken(user.UserEntity{
+			UserId:   userEntityInfo.UserId,
 			UserName: userEntityInfo.UserName,
 			Role:     userEntityInfo.Role,
 		})

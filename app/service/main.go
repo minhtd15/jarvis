@@ -3,6 +3,7 @@ package main
 import (
 	"education-website/api"
 	authService2 "education-website/service/authService"
+	"education-website/service/courseClass"
 	"education-website/service/user"
 	"education-website/store"
 	"fmt"
@@ -34,6 +35,13 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
+	classService := courseClass.NewClassService(courseClass.ClassServiceCfg{
+		ClassStore: store.NewClassManagementStore(store.ClassManagementStoreCfg{
+			Db: db,
+		}),
+	})
+	cfg.ClassService = classService
+
 	userService := user.NewUserService(user.UserServiceCfg{
 		UserStore: store.NewUserManagementStore(store.UserManagementStoreCfg{
 			Db: db,
@@ -55,12 +63,13 @@ func main() {
 	defer db.Close() // Close the database connection when finished
 
 	apiCfg := api.Config{
-		Server:      cfg.Server,
-		Database:    cfg.Database,
-		XApiKey:     cfg.XApiKey,
-		UserService: cfg.UserService,
-		JwtService:  cfg.JwtService,
-		AuthService: cfg.AuthService,
+		Server:       cfg.Server,
+		Database:     cfg.Database,
+		XApiKey:      cfg.XApiKey,
+		UserService:  cfg.UserService,
+		JwtService:   cfg.JwtService,
+		AuthService:  cfg.AuthService,
+		ClassService: cfg.ClassService,
 	}
 	api.Init(apiCfg)
 	// Run the server
