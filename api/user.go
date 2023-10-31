@@ -223,3 +223,38 @@ func handleExcelSalary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func handleInsertStudents(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle insert students information")
+	logger.Infof("Insert all students information from an excel file")
+
+	err := r.ParseMultipartForm(10 << 20) // 10 MB limit for the uploaded file
+	if err != nil {
+		http.Error(w, "Unable to parse uploaded file", http.StatusBadRequest)
+		return
+	}
+
+	// Get the uploaded file
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Missing or invalid 'file' field in the request", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	err = userService.ImportStudentsByExcel(file, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error insert student to db by import excel")
+		http.Error(w, "Cannot insert student to db by import excel", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful insert students list to database by importing excel data",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}

@@ -147,14 +147,16 @@ func NewRouter(config Config) http.Handler {
 	internalRouter.HandleFunc("/change-password", handleChangePassword).Methods(http.MethodPut)
 	internalRouter.HandleFunc("/salary-info", handlerSalaryInformation).Methods(http.MethodGet)
 	internalRouter.HandleFunc("/modify-salary-configuration", handleModifySalaryConfiguration).Methods(http.MethodPut)
-	internalRouter.HandleFunc("/new-class", handleInsertNewClass).Methods(http.MethodPost)
+	internalRouter.HandleFunc("/new-course", handleInsertNewClass).Methods(http.MethodPost)
+	internalRouter.HandleFunc("/insert-students", handleInsertStudents).Methods(http.MethodPost)
 
 	// APIs that require token
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()
-	externalRouter.HandleFunc("/login-verification", handlerLoginUser).Methods(http.MethodPost)
+	externalRouter.HandleFunc("/login", handlerLoginUser).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/register", handlerRegisterUser).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/excel-export", handleExcelSalary).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/class-info", handleGetClassInformation).Methods(http.MethodGet)
+	externalRouter.HandleFunc("/all-courses", handleGetAllCourseInformation).Methods(http.MethodGet)
 	//internalRouter.HandleFunc("/class-information", handleGetClassInformation).Methods(http.MethodGet)
 
 	c := cors.New(cors.Options{

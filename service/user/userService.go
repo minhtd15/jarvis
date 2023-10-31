@@ -5,11 +5,13 @@ import (
 	batman "education-website"
 	api_request "education-website/api/request"
 	api_response "education-website/api/response"
+	"education-website/entity/student"
 	"education-website/entity/user"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/xuri/excelize/v2"
 	"golang.org/x/crypto/bcrypt"
+	"mime/multipart"
 	"strconv"
 	"strings"
 	"time"
@@ -210,4 +212,71 @@ func ExportToExcel(data []api_response.SalaryAPIResponse) (*excelize.File, error
 	}
 
 	return file, nil
+}
+
+func (u userService) ImportStudentsByExcel(file multipart.File, ctx context.Context) error {
+	// Read the Excel file
+	f, err := excelize.OpenReader(file)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to open excel file")
+		return err
+	}
+
+	// Get values from the specified sheet and columns
+	sheetName := "Student"
+	columnName := "A"    // Column for studentName
+	dobColumnName := "B" // Column for DOB
+	emailColumn := "C"
+	phoneColumn := "D"
+
+	rows, err := f.GetRows(sheetName)
+	if err != nil {
+		log.WithError(err).Errorf("Error getting row from excel file")
+		return err
+	}
+
+	var studentData []student.EntityStudent
+
+	// Iterate through rows and extract data
+	for i, row := range rows {
+		// skip the first row as the headers of table
+		if i == 0 {
+			continue
+		}
+
+		studentName := u.rowToColumnValue(row, columnName)
+		dob := u.rowToColumnValue(row, dobColumnName)
+		email := u.rowToColumnValue(row, emailColumn)
+		phone := u.rowToColumnValue(row, phoneColumn)
+
+		rowData := student.EntityStudent{
+			Name:    studentName,
+			DOB:     dob,
+			Email:   email,
+			PhoneNo: phone,
+		}
+
+		studentData = append(studentData, rowData)
+	}
+
+	err = u.userStore.InsertStudentStore(studentData, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error inserting student data to database")
+		return err
+	}
+
+	return nil
+}
+
+func (u userService) rowToColumnValue(row []string, column string) string {
+	columnIndex, err := excelize.ColumnNameToNumber(column)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if columnIndex <= len(row) {
+		return row[columnIndex-1]
+	}
+
+	return "" // Return empty string if column index is out of range
 }

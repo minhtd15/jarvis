@@ -7,6 +7,7 @@ import (
 	"education-website/entity/course_class"
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 type classManagementStore struct {
@@ -23,22 +24,111 @@ func NewClassManagementStore(classManagementStoreCfg ClassManagementStoreCfg) *c
 	}
 }
 
-func (c *classManagementStore) InsertNewClassStore(request api_request.NewClassRequest, ctx context.Context) error {
+func (c *classManagementStore) InsertNewCourseStore(entity course_class.CourseEntity, rq api_request.NewCourseRequest, schedule []time.Time, ctx context.Context) error {
+	log.Info("insert new class and course to db")
+
+	tx, err := c.db.Begin()
+	if err != nil {
+		log.WithError(err).Errorf("Failed to begin transaction")
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			log.WithError(err).Errorf("Rolling back transaction")
+			tx.Rollback()
+			return
+		}
+		err = tx.Commit()
+		if err != nil {
+			log.WithError(err).Errorf("Error committing transaction")
+		}
+	}()
+
+	// Insert into COURSE table
+	sqlCourse := "INSERT INTO COURSE (COURSE_TYPE_ID, MAIN_TEACHER, ROOM, START_DATE, END_DATE, STUDY_DAYS, LOCATION) VALUES (?, ?, ?, ?, ?, ?, ?)"
+	_, err = tx.Exec(sqlCourse, entity.CourseTypeId, entity.MainTeacher, entity.Room, entity.StartDate, entity.EndDate, entity.StudyDays, rq.Location)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to insert course into the database")
+		return err
+	}
+
+	// Get the last inserted ID
+	var courseID int64
+	err = tx.QueryRow("SELECT LAST_INSERT_ID()").Scan(&courseID)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to get last insert ID")
+		return err
+	}
+
+	// Insert into CLASS table for each schedule entry
+	sqlClass := "INSERT INTO CLASS (COURSE_ID, START_TIME, END_TIME, DATE, ROOM, TYPE_CLASS) VALUES (?, ?, ?, ?, ?, ?)"
+	stmt, err := tx.Prepare(sqlClass)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to prepare SQL statement for CLASS")
+		return err
+	}
+	defer stmt.Close()
+
+	for _, v := range schedule {
+		_, err := stmt.Exec(courseID, rq.StartTime, rq.EndTime, v, entity.Room, rq.TypeCourseCode)
+		if err != nil {
+			log.WithError(err).Errorf("Failed to insert class into the database")
+			return err
+		}
+	}
+
 	return nil
+}
+
+func (c *classManagementStore) GetAllCoursesStore(ctx context.Context) ([]course_class.CourseEntity, error) {
+	log.Infof("Get all courses")
+
+	sqlQuery := "SELECT * FROM COURSE"
+	var entities []course_class.CourseEntity
+	err := c.db.SelectContext(ctx, &entities, sqlQuery)
+
+	if err != nil {
+		log.WithError(err).Errorf("Failed to retrieve courses from the database")
+		return nil, err
+	}
+
+	return entities, nil
+
+}
+
+func (c *classManagementStore) GetSessionsByCourseType(typeCourseCode string, ctx context.Context) (*int, *int, error) {
+	log.Infof("Get total sessions of course %s", typeCourseCode)
+
+	var totalSessions int
+	var courseTypeId int
+	sqlQuery := "SELECT TOTAL_SESSIONS, COURSE_TYPE_ID FROM COURSE_TYPE WHERE CODE = ?"
+
+	err := c.db.QueryRowxContext(ctx, sqlQuery, typeCourseCode).Scan(&totalSessions, &courseTypeId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.WithError(err).Errorf("No row in db for course %s", typeCourseCode)
+			return nil, nil, err
+		}
+		log.WithError(err).Errorf("Cannot find total sessions for course %s", typeCourseCode)
+		return nil, nil, err
+	}
+
+	return &totalSessions, &courseTypeId, err
 }
 
 func (c *classManagementStore) GetCourseInformationStore(request api_request.CourseInfoRequest, ctx context.Context) (course_class.CourseEntity, error) {
 	log.Info("Get class information from database")
 
 	entity := course_class.CourseEntity{}
-	sqlQuery := "select C.* , CONCAT(CT.CODE, C.COURSE_ID) AS CLASS_NAME, CT.TOTAL_SESSIONS " +
+	sqlQuery := "select C.* , CONCAT(CT.CODE, C.COURSE_ID) AS COURSE_NAME, CT.TOTAL_SESSIONS " +
 		"FROM COURSE C join COURSE_TYPE CT " +
 		"where c.COURSE_TYPE_ID = CT.COURSE_TYPE_ID AND C.COURSE_ID = ?"
 
-	err := c.db.QueryRowxContext(ctx, sqlQuery, request.CourseId).Scan(&entity.CourseId, &entity.CourseTypeId, &entity.MainTeacher, &entity.Room, &entity.StartDate, &entity.EndDate, &entity.StudyDays, &entity.CourseName, &entity.TotalSessions)
+	err := c.db.QueryRowxContext(ctx, sqlQuery, request.CourseId).Scan(&entity.CourseId, &entity.CourseTypeId, &entity.MainTeacher, &entity.Room, &entity.StartDate, &entity.EndDate, &entity.StudyDays, &entity.CourseName, &entity.Location, &entity.TotalSessions)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			//log.WithError(err).Errorf("Cannot find user with class name: %s", userName)
+			log.WithError(err).Errorf("Cannot find course %s information", request.CourseId)
 			return entity, err
 		}
 		log.WithError(err).Errorf("Cannot get info from database for user: %s", request.CourseId)

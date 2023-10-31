@@ -6,6 +6,7 @@ import (
 	batman "education-website"
 	api_request "education-website/api/request"
 	"education-website/entity/salary"
+	"education-website/entity/student"
 	"education-website/entity/user"
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
@@ -92,9 +93,9 @@ func (u *userManagementStore) GetSalaryReportStore(userName string, month string
 
 	var sqlQuery string
 	if userName == "" {
-		sqlQuery = "select u.USERNAME, u.FULLNAME, u.GENDER, u.JOB_POSITION, s.PAYROLL_ID, s.TYPE_PAYROLL, s.TOTAL_WORK_DATES, s.PAYROLL_RATE, s.SALARY from SALARY s  join USER u ON s.USER_ID = u.USER_ID WHERE s.MONTH = ?  and s.YEAR = ?"
+		sqlQuery = "select u.USERNAME, u.FULLNAME, u.GENDER, u.JOB_POSITION, s.TYPE_PAYROLL, s.TOTAL_WORK_DATES, s.PAYROLL_RATE, s.SALARY from SALARY s  join USER u ON s.USER_ID = u.USER_ID WHERE s.MONTH = ?  and s.YEAR = ?"
 	} else {
-		sqlQuery = "select u.USERNAME, u.FULLNAME, u.GENDER, u.JOB_POSITION, s.PAYROLL_ID, s.TYPE_PAYROLL, s.TOTAL_WORK_DATES, s.PAYROLL_RATE, s.SALARY from SALARY s  join USER u ON s.USER_ID = u.USER_ID WHERE s.MONTH = ?  and s.YEAR = ? AND u.FULLNAME LIKE CONCAT('%', ?, '%');"
+		sqlQuery = "select u.USERNAME, u.FULLNAME, u.GENDER, u.JOB_POSITION, s.TYPE_PAYROLL, s.TOTAL_WORK_DATES, s.PAYROLL_RATE, s.SALARY from SALARY s  join USER u ON s.USER_ID = u.USER_ID WHERE s.MONTH = ?  and s.YEAR = ? AND u.FULLNAME LIKE CONCAT('%', ?, '%');"
 	}
 	rows, err := u.db.QueryxContext(ctx, sqlQuery, month, year, userName)
 	if err != nil {
@@ -134,5 +135,46 @@ func (u *userManagementStore) ModifySalaryConfigurationStore(userId string, user
 	}
 
 	log.Infof("Salary configuration updated successfully for user: %s", userId)
+	return nil
+}
+
+func (u *userManagementStore) InsertStudentStore(data []student.EntityStudent, ctx context.Context) error {
+	log.Infof("Insert to db students list")
+
+	tx, err := u.db.Begin()
+	if err != nil {
+		log.WithError(err).Errorf("Failed to begin transaction")
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			log.WithError(err).Errorf("Rolling back transaction")
+			tx.Rollback()
+			return
+		}
+		err = tx.Commit()
+		if err != nil {
+			log.WithError(err).Errorf("Error committing transaction")
+		}
+	}()
+
+	// Insert into COURSE table
+	sqlClass := "INSERT INTO STUDENT (STUDENT_NAME, DOB, EMAIL, PHONE_NUMBER) VALUES (?, ?, ?, ?)"
+	stmt, err := tx.Prepare(sqlClass)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to prepare SQL statement for CLASS")
+		return err
+	}
+	defer stmt.Close()
+
+	for _, v := range data {
+		_, err := stmt.Exec(v.Name, v.DOB, v.Email, v.PhoneNo)
+		if err != nil {
+			log.WithError(err).Errorf("Failed to insert class into the database")
+			return err
+		}
+	}
+
 	return nil
 }

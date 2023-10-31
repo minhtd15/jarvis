@@ -9,6 +9,8 @@ type CourseInfoResponse struct {
 	Room          int64     `json:"room"`
 	StartDate     time.Time `json:"start_date"`
 	EndDate       time.Time `json:"end_date"`
+	StartTime     time.Time `json:"start_time"`
+	EndTime       time.Time `json:"end_time"`
 	StudyDays     string    `json:"study_days"`
 	CourseStatus  string    `json:"course_status"`
 	TotalSessions int64     `json:"total_sessions"`
