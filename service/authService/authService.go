@@ -4,6 +4,7 @@ import (
 	batman "education-website"
 	"education-website/api/request"
 	"fmt"
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -22,8 +23,12 @@ func NewAuthService(authServiceCfg AuthServiceCfg) *authService {
 }
 
 func (a authService) VerifyUser(userLoginRequest request.LoginRequest, userEntity batman.UserResponse) (interface{}, error) {
+	if err := bcrypt.CompareHashAndPassword([]byte(userEntity.Password), []byte(userLoginRequest.Password)); err != nil {
+		// Trả về một lỗi hoặc mã lỗi xác định
+		return nil, errors.New("Invalid username or password")
+	}
 
-	if userLoginRequest.Email == userEntity.Email && bcrypt.CompareHashAndPassword([]byte(userEntity.Password), []byte(userLoginRequest.Password)) != nil {
+	if userLoginRequest.Email == userEntity.Email {
 		userInfo := map[string]interface{}{
 			"username": userLoginRequest.Email,
 			"role":     "user",

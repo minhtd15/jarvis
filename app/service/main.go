@@ -29,8 +29,8 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	api.InitLog()
-
+	//api.InitLog()
+	//
 	// Initialize the database connection
 	db, err := InitDatabase(*cfg)
 	if err != nil {

@@ -47,6 +47,7 @@ func handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 	checkPasswordSimilarity, err := authService.VerifyUser(userRequest, *userEntityInfo)
 	if err != nil {
 		log.WithError(err).Errorf("Invalid username or password for user: %s", userEntityInfo.UserName)
+		http.Error(w, "wrong password/username", http.StatusBadRequest)
 		return
 	}
 
