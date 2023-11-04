@@ -24,9 +24,10 @@ func NewJwtService(jwtServiceCfg JwtServiceCfg) batman.JwtService {
 	}
 }
 
-func NewPayload(username string, role string, duration time.Duration) (*batman.Payload, error) {
+func NewPayload(username string, userId string, role string, duration time.Duration) (*batman.Payload, error) {
 	payload := &batman.Payload{
 		Username:  username,
+		UserId:    userId,
 		Role:      role,
 		IssuedAt:  time.Now(),
 		ExpiredAt: time.Now().Add(duration),
@@ -35,7 +36,7 @@ func NewPayload(username string, role string, duration time.Duration) (*batman.P
 }
 
 func (j jwtService) GenerateToken(userEntity user.UserEntity) string {
-	payload, err := NewPayload(userEntity.UserName, userEntity.Role, tokenDuration)
+	payload, err := NewPayload(userEntity.UserName, userEntity.UserId, userEntity.Role, tokenDuration)
 	if err != nil {
 		return ""
 	}

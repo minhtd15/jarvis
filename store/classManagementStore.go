@@ -78,6 +78,30 @@ func (c *classManagementStore) InsertNewCourseStore(entity course_class.CourseEn
 		}
 	}
 
+	var userId string
+	err = tx.QueryRow("SELECT USER_ID FROM USER WHERE USERNAME = ?", entity.MainTeacher).Scan(&userId)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to get last insert ID")
+		return err
+	}
+
+	// insert default main teacher in every class of this course
+	sqlQuery := "INSERT INTO CLASS_MANAGER VALUES (?, ?, ?, ?)"
+	stmt, err = tx.Prepare(sqlQuery)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to prepare SQL statement for CLASS")
+		return err
+	}
+	defer stmt.Close()
+
+	for _, v := range schedule {
+		_, err := stmt.Exec(userId, courseID, "Teacher", v.Format("2006-01-02"))
+		if err != nil {
+			log.WithError(err).Errorf("Failed to insert main teacher into the database")
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -165,4 +189,37 @@ func (c *classManagementStore) GetTeacherStore(request api_request.CourseInfoReq
 	}
 
 	return teacherName, teachingAssistant, nil
+}
+
+func (c *classManagementStore) GetAllCourseType(ctx context.Context) ([]course_class.CourseTypeEntity, error) {
+	log.Infof("Get all courses type")
+
+	sqlQuery := "SELECT * FROM COURSE_TYPE"
+	var entities []course_class.CourseTypeEntity
+	err := c.db.SelectContext(ctx, &entities, sqlQuery)
+
+	if err != nil {
+		log.WithError(err).Errorf("Failed to retrieve courses from the database")
+		return nil, err
+	}
+
+	return entities, nil
+}
+
+func (c *classManagementStore) GetClassFromToDateStore(fromDate string, toDate string, userId string, ctx context.Context) ([]course_class.FromToScheduleEntity, error) {
+	log.Infof("Get all classes for user %s from %s, to %s", userId, fromDate, toDate)
+	sqlQuery := "SELECT c.COURSE_ID, co.COURSE_TYPE_ID, c.START_TIME, c.END_TIME, c.DATE " +
+		"FROM CLASS c " +
+		"JOIN CLASS_MANAGER cm ON c.COURSE_ID = cm.COURSE_ID " +
+		"JOIN COURSE co ON c.COURSE_ID = co.COURSE_ID " +
+		"WHERE cm.USER_ID = ? " +
+		"AND c.DATE >= ? AND c.DATE <= ?"
+
+	var rs []course_class.FromToScheduleEntity
+	err := c.db.SelectContext(ctx, &rs, sqlQuery, userId, fromDate, toDate)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to get class for user %s from the database", userId)
+		return nil, err
+	}
+	return rs, nil
 }

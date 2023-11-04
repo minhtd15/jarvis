@@ -12,6 +12,8 @@ type ClassService interface {
 	AddNewClass(request api_request.NewCourseRequest, ctx context.Context) error
 	GetCourseInformationByClassName(request api_request.CourseInfoRequest, ctx context.Context) (*api_response.CourseInfoResponse, error)
 	GetAllCourses(ctx context.Context) ([]api_response.CourseInfoResponse, error)
+	GetCourseType(ctx context.Context) (map[int]string, error)
+	GetFromToSchedule(fromDate string, toDate string, userId string, courseType map[int]string, ctx context.Context) ([]api_response.FromToScheduleResponse, error)
 }
 
 type ClassStore interface {
@@ -19,4 +21,6 @@ type ClassStore interface {
 	GetCourseInformationStore(request api_request.CourseInfoRequest, ctx context.Context) (course_class.CourseEntity, error)
 	GetSessionsByCourseType(typeCourseCode string, ctx context.Context) (*int, *int, error)
 	GetAllCoursesStore(ctx context.Context) ([]course_class.CourseEntity, error)
+	GetAllCourseType(ctx context.Context) ([]course_class.CourseTypeEntity, error)
+	GetClassFromToDateStore(fromDate string, toDate string, userId string, ctx context.Context) ([]course_class.FromToScheduleEntity, error)
 }

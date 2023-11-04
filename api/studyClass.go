@@ -92,13 +92,52 @@ func handleGetAllCourseInformation(w http.ResponseWriter, r *http.Request) {
 	allCoursesInfo, err := classService.GetAllCourses(ctx)
 	if err != nil {
 		log.WithError(err).Errorf("Error getting all courses information")
-		http.Error(w, "Status bad Request", http.StatusInternalServerError)
+		http.Error(w, "Status internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	response := map[string]interface{}{
 		"message": "Successful getting all course",
 		"data":    allCoursesInfo,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func handleClassFromToDateById(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle get default class information")
+	logger.Infof("Get default class information")
+
+	userId, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "Unable to get userId from token", http.StatusUnauthorized)
+		return
+	}
+
+	keys := r.URL.Query()
+	fromDate := keys.Get("fromDate")
+	toDate := keys.Get("toDate")
+
+	courseType, err := classService.GetCourseType(ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to get course type")
+		http.Error(w, "unable to get course type api", http.StatusInternalServerError)
+		return
+	}
+
+	schedule, err := classService.GetFromToSchedule(fromDate, toDate, userId, courseType, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error getting all schedule api for user: %s", userId)
+		http.Error(w, "Unable to get schedule", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful getting schedule information",
+		"data":    schedule,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

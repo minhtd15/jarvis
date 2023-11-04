@@ -39,6 +39,7 @@ type UserService interface {
 	GetSalaryInformation(userName string, month string, year string, ctx context.Context) ([]*api_response.SalaryAPIResponse, error)
 	ModifySalaryConfiguration(userSalaryInfo api_request.ModifySalaryConfRequest, ctx context.Context) error
 	ImportStudentsByExcel(file multipart.File, ctx context.Context) error
+	ModifyUserService(rq api_request.ModifyUserInformationRequest, userId string, ctx context.Context) error
 }
 
 type UserStore interface {
@@ -48,4 +49,5 @@ type UserStore interface {
 	GetSalaryReportStore(userName string, month string, year string, ctx context.Context) ([]salary.SalaryEntity, error)
 	ModifySalaryConfigurationStore(userId string, userSalaryInfo []api_request.SalaryConfiguration, ctx context.Context) error
 	InsertStudentStore(data []student.EntityStudent, ctx context.Context) error
+	ModifyUserInformationStore(rq api_request.ModifyUserInformationRequest, userId string, ctx context.Context) error
 }

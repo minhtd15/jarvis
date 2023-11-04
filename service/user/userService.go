@@ -280,3 +280,7 @@ func (u userService) rowToColumnValue(row []string, column string) string {
 
 	return "" // Return empty string if column index is out of range
 }
+
+func (u userService) ModifyUserService(rq api_request.ModifyUserInformationRequest, userId string, ctx context.Context) error {
+	return u.userStore.ModifyUserInformationStore(rq, userId, ctx)
+}

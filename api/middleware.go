@@ -29,8 +29,11 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 			}
 
 			// check whether the token is valid
-			ctx := context.WithValue(r.Context(), "username", claims.Username)
+			ctx := r.Context()
+			ctx = context.WithValue(ctx, "username", claims.Username)
+			ctx = context.WithValue(ctx, "user_id", claims.UserId)
 			ctx = context.WithValue(ctx, "role", claims.Role)
+			//log.Infof("user name: %s \n userId: %s \n role: %s", claims.Username, claims.UserId, claims.Role)
 			r = r.WithContext(ctx)
 
 			next.ServeHTTP(w, r)

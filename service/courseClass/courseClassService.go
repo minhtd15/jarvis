@@ -7,6 +7,7 @@ import (
 	api_request "education-website/api/request"
 	api_response "education-website/api/response"
 	"education-website/entity/course_class"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"strings"
 	"time"
@@ -250,6 +251,46 @@ func (c classService) GetAllCourses(ctx context.Context) ([]api_response.CourseI
 			TotalSessions: v.TotalSessions,
 		}
 
+		rs = append(rs, tmp)
+	}
+
+	return rs, nil
+}
+
+func (c classService) GetCourseType(ctx context.Context) (map[int]string, error) {
+	courseTypeList, err := c.classStore.GetAllCourseType(ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to get course type from db")
+		return nil, err
+	}
+
+	rs := make(map[int]string)
+	for _, v := range courseTypeList {
+		rs[v.CourseTypeId] = v.CourseCode
+	}
+	log.Infof("Successfully get course type from db")
+	return rs, nil
+}
+
+func (c classService) GetFromToSchedule(fromDate string, toDate string, userId string, courseType map[int]string, ctx context.Context) ([]api_response.FromToScheduleResponse, error) {
+	log.Infof("get %s classes from %s to %s", userId, fromDate, toDate)
+
+	fromToScheduleEntity, err := c.classStore.GetClassFromToDateStore(fromDate, toDate, userId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error getting class from %s to %s for user %s", fromDate, toDate, userId)
+		return nil, err
+	}
+
+	var rs []api_response.FromToScheduleResponse
+	for _, v := range fromToScheduleEntity {
+		tmp := api_response.FromToScheduleResponse{
+			CourseId:   v.CourseId,
+			CourseCode: courseType[int(v.CourseTypeId)],
+			StartTime:  v.StartTime,
+			EndTime:    v.EndTime,
+			Date:       v.Date,
+		}
+		tmp.CourseName = fmt.Sprintf("%s%d", tmp.CourseCode, v.CourseId)
 		rs = append(rs, tmp)
 	}
 

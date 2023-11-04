@@ -68,21 +68,44 @@ func (u *userManagementStore) InsertNewUserStore(newUser user.UserEntity, ctx co
 func (u *userManagementStore) UpdateNewPassword(newPassword []byte, userName string) error {
 	log.Infof("Start to update new password")
 
+	// Begin a transaction
+	tx, err := u.db.Begin()
+	if err != nil {
+		log.WithError(err).Errorf("Failed to begin transaction")
+		return err
+	}
+
+	defer func() {
+		// Rollback the transaction if there is an error or return is not nil
+		if r := recover(); r != nil || err != nil {
+			log.WithError(err).Errorf("Rolling back transaction")
+			tx.Rollback()
+			return
+		}
+		// Commit the transaction if there is no error
+		err := tx.Commit()
+		if err != nil {
+			log.WithError(err).Errorf("Failed to commit transaction")
+		}
+	}()
+
 	sqlQuery := "UPDATE USER SET PASSWORD = ? WHERE USERNAME = ?"
 
-	stmt, err := u.db.Prepare(sqlQuery)
+	stmt, err := tx.Prepare(sqlQuery)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to prepare SQL statement")
 		return err
 	}
 	defer stmt.Close()
 
-	// Execute the prepared statement
+	// Execute the prepared statement within the transaction
 	_, err = stmt.Exec(newPassword, userName)
 	if err != nil {
-		log.WithError(err).Errorf("Failed to insert user into the database")
+		log.WithError(err).Errorf("Failed to update user password in the database")
 		return err
 	}
+
+	// Return nil if the update is successful
 	return nil
 }
 
@@ -176,5 +199,20 @@ func (u *userManagementStore) InsertStudentStore(data []student.EntityStudent, c
 		}
 	}
 
+	return nil
+}
+
+func (u *userManagementStore) ModifyUserInformationStore(rq api_request.ModifyUserInformationRequest, userId string, ctx context.Context) error {
+	log.Infof("Insert to db students list")
+
+	sqlQuery := "UPDATE USER SET EMAIL = ?, DOB = ?, FULLNAME = ?, GENDER = ? WHERE USER_ID = ?"
+
+	_, err := u.db.ExecContext(ctx, sqlQuery, rq.Email, rq.Dob, rq.FullName, rq.Gender, userId)
+	if err != nil {
+		log.WithError(err).Errorf("Error update user %s information on db", userId)
+		return err
+	}
+
+	log.Infof("Successful update user information")
 	return nil
 }

@@ -67,6 +67,8 @@ func handlerSalaryInformation(w http.ResponseWriter, r *http.Request) {
 
 	keys := r.URL.Query()
 	userSearchName := keys.Get("username") // this variable is used for searching engine for leader
+	month := keys.Get("month")
+	year := keys.Get("year")
 	role, ok := r.Context().Value("role").(string)
 	userName, ok := r.Context().Value("username").(string)
 	if !ok {
@@ -74,21 +76,9 @@ func handlerSalaryInformation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.WithError(err).Warningf("Error when reading from request")
-		http.Error(w, "Invalid format", 252001)
-		return
-	}
-
-	json.NewDecoder(r.Body)
-	defer r.Body.Close()
-	var salaryRequest api_request.SalaryRequest
-	err = json.Unmarshal(bodyBytes, &salaryRequest)
-	if err != nil {
-		log.WithError(err).Warningf("Error when unmarshaling data from request")
-		http.Error(w, "Status bad Request", http.StatusBadRequest) // Return a 400 Bad Request error
-		return
+	salaryRequest := api_request.SalaryRequest{
+		Month: month,
+		Year:  year,
 	}
 
 	if role == "user" {
@@ -155,6 +145,16 @@ func handleModifySalaryConfiguration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if role == "user" {
+		response := map[string]interface{}{
+			"message": "You are not allowed to access to this function",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+	}
+
 	bodyBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.WithError(err).Warningf("Error when reading from request")
@@ -168,20 +168,15 @@ func handleModifySalaryConfiguration(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bodyBytes, &newSalaryInfo)
 	if err != nil {
 		log.WithError(err).Warningf("Error when unmarshaling data from request")
-		http.Error(w, "Status bad Request", http.StatusBadRequest) // Return a 400 Bad Request error
+		http.Error(w, "Status internal server error", http.StatusInternalServerError) // Return a 400 Bad Request error
 		return
 	}
 
-	if role == "user" {
-		response := map[string]interface{}{
-			"message": "You are not allowed to access to this function",
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
-	} else {
-
+	err = userService.ModifySalaryConfiguration(newSalaryInfo, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error modify salary configuration for user")
+		http.Error(w, "Status internal server error", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -250,6 +245,53 @@ func handleInsertStudents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	response := map[string]interface{}{
+		"message": "Successful insert students list to database by importing excel data",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func handleModifyUserInformation(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "modify user information")
+	logger.Infof("Only leader and admin can modify this information")
+
+	userId, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
+		return
+	}
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	// this is the information that the user type in front end
+	var rq api_request.ModifyUserInformationRequest
+	err = json.Unmarshal(bodyBytes, &rq)
+	if err != nil {
+		log.WithError(err).Errorf("Error marshaling body to modify user information request")
+		http.Error(w, "Status internal Request", http.StatusInternalServerError)
+		return
+	}
+
+	err = userService.ModifyUserService(rq, userId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error modify user information request service")
+		http.Error(w, "Error internal Request", http.StatusInternalServerError)
+		return
+	}
+
+	log.Infof("Successful update user %s information", userId)
 	response := map[string]interface{}{
 		"message": "Successful insert students list to database by importing excel data",
 	}

@@ -10,6 +10,8 @@ import (
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/apm/module/apmlogrus"
+	"io"
+
 	"gopkg.in/yaml.v3"
 	"net/http"
 	"os"
@@ -39,7 +41,6 @@ type Config struct {
 	Server struct {
 		// Host is the local machine IP Address to bind the HTTP Server to
 		Host string `yaml:"host"`
-
 		// Port is the local machine TCP Port to bind the HTTP Server to
 		Port    string `yaml:"port"`
 		Timeout struct {
@@ -100,6 +101,18 @@ func NewConfig(configPath string) (*Config, error) {
 	return config, nil
 }
 
+func InitLog() {
+	// Set the log format to plain text
+	f, err := os.OpenFile("/Users/minhtong/Desktop/batman.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
+	wrt := io.MultiWriter(os.Stdout, f)
+	log.SetOutput(wrt)
+	log.Println(" Orders API Called")
+}
+
 // ValidateConfigPath just makes sure, that the path provided is a file,
 // that can be read
 func ValidateConfigPath(path string) error {
@@ -149,6 +162,8 @@ func NewRouter(config Config) http.Handler {
 	internalRouter.HandleFunc("/modify-salary-configuration", handleModifySalaryConfiguration).Methods(http.MethodPut)
 	internalRouter.HandleFunc("/new-course", handleInsertNewClass).Methods(http.MethodPost)
 	internalRouter.HandleFunc("/insert-students", handleInsertStudents).Methods(http.MethodPost)
+	internalRouter.HandleFunc("/user-schedule", handleClassFromToDateById).Methods(http.MethodGet)
+	internalRouter.HandleFunc("/modify-user-info", handleModifyUserInformation).Methods(http.MethodPut)
 
 	// APIs that require token
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()

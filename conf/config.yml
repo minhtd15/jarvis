@@ -15,3 +15,5 @@ database:
   user: root
   pass: tongminh1510
   dbName: EDUDBTEST
+
+log:

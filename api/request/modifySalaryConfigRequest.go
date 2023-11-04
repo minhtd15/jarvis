@@ -2,12 +2,11 @@ package request
 
 type ModifySalaryConfRequest struct {
 	UserId        string                `json:"user_id"`
-	UserName      string                `json:"user_name"`
-	NewSalaryList []SalaryConfiguration `json:"new_salary_list"`
+	NewSalaryList []SalaryConfiguration `json:"salary"`
 }
 
 type SalaryConfiguration struct {
-	PayrollId     string `json:"payroll_id"`
-	TypePayroll   string `json:"type_payroll"`
-	PayrollAmount string `json:"payroll_amount"`
+	PayrollId     int     `json:"payroll_id"`
+	TypePayroll   string  `json:"type_payroll"`
+	PayrollAmount float64 `json:"payroll_amount"`
 }
