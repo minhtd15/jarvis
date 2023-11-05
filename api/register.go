@@ -3,6 +3,7 @@ package api
 import (
 	api_request "education-website/api/request"
 	"encoding/json"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/apm"
 	"io/ioutil"
@@ -97,7 +98,9 @@ func handleChangePassword(w http.ResponseWriter, r *http.Request) {
 
 	err = userService.ChangePassword(changePasswordRequest, userName, ctx)
 	if err != nil {
-		log.WithError(err).Errorf("Unable to change password")
+		errMsg := fmt.Sprintf("Failed to change password: %s", err.Error())
+		log.WithError(err).Errorf(errMsg)
+		http.Error(w, errMsg, http.StatusBadRequest)
 		return
 	}
 

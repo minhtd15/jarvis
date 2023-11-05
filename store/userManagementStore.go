@@ -115,16 +115,21 @@ func (u *userManagementStore) GetSalaryReportStore(userName string, month string
 	var entities []salary.SalaryEntity
 
 	var sqlQuery string
-	if userName == "" {
-		sqlQuery = "select u.USERNAME, u.FULLNAME, u.GENDER, u.JOB_POSITION, s.TYPE_PAYROLL, s.TOTAL_WORK_DATES, s.PAYROLL_RATE, s.SALARY from SALARY s  join USER u ON s.USER_ID = u.USER_ID WHERE s.MONTH = ?  and s.YEAR = ?"
-	} else {
-		sqlQuery = "select u.USERNAME, u.FULLNAME, u.GENDER, u.JOB_POSITION, s.TYPE_PAYROLL, s.TOTAL_WORK_DATES, s.PAYROLL_RATE, s.SALARY from SALARY s  join USER u ON s.USER_ID = u.USER_ID WHERE s.MONTH = ?  and s.YEAR = ? AND u.FULLNAME LIKE CONCAT('%', ?, '%');"
+	var rows *sqlx.Rows
+	sqlQuery = "select u.USERNAME, u.FULLNAME, u.GENDER, u.JOB_POSITION, s.TYPE_PAYROLL, s.TOTAL_WORK_DATES, s.PAYROLL_RATE, s.SALARY from SALARY s join USER u ON s.USER_ID = u.USER_ID WHERE s.MONTH = ? and s.YEAR = ?"
+	args := []interface{}{month, year}
+
+	if userName != "" {
+		sqlQuery += " AND u.FULLNAME LIKE CONCAT('%', ?, '%')"
+		args = append(args, userName)
 	}
-	rows, err := u.db.QueryxContext(ctx, sqlQuery, month, year, userName)
+
+	rows, err := u.db.QueryxContext(ctx, sqlQuery, args...)
 	if err != nil {
-		log.WithError(err).Errorf("Cannot get info from database for user: %s", userName)
+		log.WithError(err).Errorf("Cannot get info from the database for user: %s", userName)
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	for rows.Next() {

@@ -99,18 +99,6 @@ func NewConfig(configPath string) (*Config, error) {
 	return config, nil
 }
 
-//func InitLog() {
-//	// Set the log format to plain text
-//	//f, err := os.OpenFile("/Users/minhtong/Desktop/batman.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-//	//if err != nil {
-//	//	log.Fatalf("error opening file: %v", err)
-//	//}
-//	defer f.Close()
-//	wrt := io.MultiWriter(os.Stdout, f)
-//	log.SetOutput(wrt)
-//	log.Println(" Orders API Called")
-//}
-
 // ValidateConfigPath just makes sure, that the path provided is a file,
 // that can be read
 func ValidateConfigPath(path string) error {

@@ -15,10 +15,6 @@ import (
 )
 
 func handlerUserAccount(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Wrong method", http.StatusMethodNotAllowed)
-		return
-	}
 
 	ctx := apm.DetachedContext(r.Context())
 	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handleRetryUserAccount")

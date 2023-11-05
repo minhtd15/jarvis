@@ -7,7 +7,7 @@ import (
 	api_response "education-website/api/response"
 	"education-website/entity/student"
 	"education-website/entity/user"
-	"fmt"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/xuri/excelize/v2"
 	"golang.org/x/crypto/bcrypt"
@@ -122,11 +122,10 @@ func (u userService) VerifyChangePassword(oldPassword string, userName string, c
 		return err
 	}
 
-	// compare old and new password
-	err = bcrypt.CompareHashAndPassword([]byte(oldPassword), []byte(oldPasswordEntity.Password))
-	if err != nil {
-		log.WithError(err).Errorf("Invalid old password")
-		return fmt.Errorf("invalid old password")
+	if err := bcrypt.CompareHashAndPassword([]byte(oldPasswordEntity.Password), []byte(oldPassword)); err != nil {
+		// Trả về một lỗi hoặc mã lỗi xác định
+		log.WithError(err).Errorf("Invalid old password, %s", err)
+		return errors.New("Invalid username or password")
 	}
 
 	return nil

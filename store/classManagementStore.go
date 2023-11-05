@@ -149,7 +149,7 @@ func (c *classManagementStore) GetCourseInformationStore(request api_request.Cou
 		"FROM COURSE C join COURSE_TYPE CT " +
 		"where c.COURSE_TYPE_ID = CT.COURSE_TYPE_ID AND C.COURSE_ID = ?"
 
-	err := c.db.QueryRowxContext(ctx, sqlQuery, request.CourseId).Scan(&entity.CourseId, &entity.CourseTypeId, &entity.MainTeacher, &entity.Room, &entity.StartDate, &entity.EndDate, &entity.StudyDays, &entity.CourseName, &entity.Location, &entity.TotalSessions)
+	err := c.db.QueryRowxContext(ctx, sqlQuery, request.CourseId).Scan(&entity.CourseId, &entity.CourseTypeId, &entity.MainTeacher, &entity.Room, &entity.StartDate, &entity.EndDate, &entity.StartTime, &entity.EndTime, &entity.StudyDays, &entity.CourseName, &entity.Location, &entity.TotalSessions)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.WithError(err).Errorf("Cannot find course %s information", request.CourseId)

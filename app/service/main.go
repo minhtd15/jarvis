@@ -9,12 +9,24 @@ import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
-	"github.com/sirupsen/logrus"
-	"log"
+	log "github.com/sirupsen/logrus"
+	"io"
+	"os"
 )
 
 func main() {
-	logrus.Info("Hello, service Batman is running")
+	// Set the log format to plain text
+	f, err := os.OpenFile("batman.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	// Create a MultiWriter to write logs to both os.Stdout and the file
+	wrt := io.MultiWriter(os.Stdout, f)
+	// Set the log output to the MultiWriter
+	log.SetOutput(wrt)
+	//log.Println("Orders API Called")
+
+	log.Info("Hello, service Batman is running")
 
 	// Generate our config based on the config supplied
 	// by the user in the flags
@@ -29,8 +41,6 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	//api.InitLog()
-	//
 	// Initialize the database connection
 	db, err := InitDatabase(*cfg)
 	if err != nil {
@@ -90,7 +100,7 @@ func InitDatabase(config api.Config) (*sqlx.DB, error) {
 	)
 
 	// Open a database connection
-	logrus.Info("Open a database connection")
+	log.Info("Open a database connection")
 	db, err := sqlx.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
