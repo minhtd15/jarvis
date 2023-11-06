@@ -154,6 +154,7 @@ func (u userService) GetSalaryInformation(userName string, month string, year st
 
 			salaryInfo := make([]api_response.SalaryInformation, 0)
 			info := api_response.SalaryInformation{
+				PayrollId:  repoRes.PayrollId,
 				CourseType: repoRes.TypeWork,
 				WorkDays:   repoRes.TotalWorkDates,
 				PriceEach:  repoRes.PayrollPerSessions,

@@ -9,6 +9,7 @@ type SalaryStoreResponse struct {
 }
 
 type SalaryInformation struct {
+	PayrollId  int64   `json:"payroll_id"`
 	CourseType string  `json:"course_type"`
 	WorkDays   int64   `json:"work_days"`
 	PriceEach  float64 `json:"price_each"`

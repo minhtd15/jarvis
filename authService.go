@@ -8,11 +8,12 @@ import (
 )
 
 type Payload struct {
-	Username  string    `json:"username"`
-	Role      string    `json:"role"`
-	UserId    string    `json:"user_id"`
-	IssuedAt  time.Time `json:"issued_at"`
-	ExpiredAt time.Time `json:"expired_at"`
+	Username     string    `json:"username"`
+	Role         string    `json:"role"`
+	UserId       string    `json:"user_id"`
+	UserFullName string    `json:"user_fullname"`
+	IssuedAt     time.Time `json:"issued_at"`
+	ExpiredAt    time.Time `json:"expired_at"`
 }
 
 func (p Payload) Valid() error {

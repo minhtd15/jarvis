@@ -66,7 +66,7 @@ func handlerSalaryInformation(w http.ResponseWriter, r *http.Request) {
 	month := keys.Get("month")
 	year := keys.Get("year")
 	role, ok := r.Context().Value("role").(string)
-	userName, ok := r.Context().Value("username").(string)
+	userName, ok := r.Context().Value("user_fullname").(string)
 	if !ok {
 		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
 		return

@@ -56,6 +56,7 @@ func handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 		generatedToken := jwtService.GenerateToken(user.UserEntity{
 			UserId:   userEntityInfo.UserId,
 			UserName: userEntityInfo.UserName,
+			FullName: userEntityInfo.FullName,
 			Role:     userEntityInfo.Role,
 		})
 

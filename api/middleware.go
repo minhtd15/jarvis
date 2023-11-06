@@ -33,6 +33,7 @@ func AuthMiddleware() func(http.Handler) http.Handler {
 			ctx = context.WithValue(ctx, "username", claims.Username)
 			ctx = context.WithValue(ctx, "user_id", claims.UserId)
 			ctx = context.WithValue(ctx, "role", claims.Role)
+			ctx = context.WithValue(ctx, "user_fullname", claims.UserFullName)
 			//log.Infof("user name: %s \n userId: %s \n role: %s", claims.Username, claims.UserId, claims.Role)
 			r = r.WithContext(ctx)
 
