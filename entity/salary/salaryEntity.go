@@ -1,6 +1,7 @@
 package salary
 
 type SalaryEntity struct {
+	UserId             string  `db:"USER_ID"`
 	UserName           string  `db:"USERNAME"`
 	FullName           string  `db:"FULLNAME"`
 	Gender             string  `db:"GENDER"`

@@ -116,7 +116,7 @@ func (u *userManagementStore) GetSalaryReportStore(userName string, month string
 
 	var sqlQuery string
 	var rows *sqlx.Rows
-	sqlQuery = "select u.USERNAME, u.FULLNAME, u.GENDER, u.JOB_POSITION, s.PAYROLL_ID, s.TYPE_PAYROLL, s.TOTAL_WORK_DATES, s.PAYROLL_RATE, s.SALARY from SALARY s join USER u ON s.USER_ID = u.USER_ID WHERE s.MONTH = ? and s.YEAR = ?"
+	sqlQuery = "select u.USER_ID, u.USERNAME, u.FULLNAME, u.GENDER, u.JOB_POSITION, s.PAYROLL_ID, s.TYPE_PAYROLL, s.TOTAL_WORK_DATES, s.PAYROLL_RATE, s.SALARY from SALARY s join USER u ON s.USER_ID = u.USER_ID WHERE s.MONTH = ? and s.YEAR = ?"
 	args := []interface{}{month, year}
 
 	if userName != "" {
@@ -134,7 +134,7 @@ func (u *userManagementStore) GetSalaryReportStore(userName string, month string
 
 	for rows.Next() {
 		var entity salary.SalaryEntity
-		if err := rows.Scan(&entity.UserName, &entity.FullName, &entity.Gender, &entity.JobPosition, &entity.PayrollId, &entity.TypeWork, &entity.TotalWorkDates, &entity.PayrollPerSessions, &entity.TotalSalary); err != nil {
+		if err := rows.Scan(&entity.UserId, &entity.UserName, &entity.FullName, &entity.Gender, &entity.JobPosition, &entity.PayrollId, &entity.TypeWork, &entity.TotalWorkDates, &entity.PayrollPerSessions, &entity.TotalSalary); err != nil {
 			log.WithError(err).Errorf("Error scanning row: %s", err.Error())
 			return nil, err
 		}

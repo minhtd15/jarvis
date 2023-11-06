@@ -146,6 +146,7 @@ func (u userService) GetSalaryInformation(userName string, month string, year st
 		if !check[repoRes.UserName] {
 			check[repoRes.UserName] = true
 			x := api_response.SalaryAPIResponse{
+				UserId:      repoRes.UserId,
 				UserName:    repoRes.UserName,
 				FullName:    repoRes.FullName,
 				Gender:      repoRes.Gender,

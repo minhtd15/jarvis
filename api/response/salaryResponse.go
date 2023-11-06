@@ -17,6 +17,7 @@ type SalaryInformation struct {
 }
 
 type SalaryAPIResponse struct {
+	UserId      string              `json:"user_id"`
 	UserName    string              `json:"user_name"`
 	FullName    string              `json:"full_name"`
 	Gender      string              `json:"gender"`
