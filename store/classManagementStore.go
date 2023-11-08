@@ -108,7 +108,7 @@ func (c *classManagementStore) InsertNewCourseStore(entity course_class.CourseEn
 func (c *classManagementStore) GetAllCoursesStore(ctx context.Context) ([]course_class.CourseEntity, error) {
 	log.Infof("Get all courses")
 
-	sqlQuery := "SELECT * FROM COURSE"
+	sqlQuery := "SELECT C.*, CONCAT(CT.CODE, COURSE_ID) AS COURSE_NAME FROM COURSE C join COURSE_TYPE CT ON C.COURSE_TYPE_ID = CT.COURSE_TYPE_ID"
 	var entities []course_class.CourseEntity
 	err := c.db.SelectContext(ctx, &entities, sqlQuery)
 

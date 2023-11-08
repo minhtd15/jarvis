@@ -116,7 +116,9 @@ func (u *userManagementStore) GetSalaryReportStore(userName string, month string
 
 	var sqlQuery string
 	var rows *sqlx.Rows
-	sqlQuery = "select u.USER_ID, u.USERNAME, u.FULLNAME, u.GENDER, u.JOB_POSITION, s.PAYROLL_ID, s.TYPE_PAYROLL, s.TOTAL_WORK_DATES, s.PAYROLL_RATE, s.SALARY from SALARY s join USER u ON s.USER_ID = u.USER_ID WHERE s.MONTH = ? and s.YEAR = ?"
+	sqlQuery = "select u.USER_ID, u.USERNAME, u.FULLNAME, u.GENDER, u.JOB_POSITION, s.PAYROLL_ID, s.TYPE_PAYROLL, s.TOTAL_WORK_DATES, s.PAYROLL_RATE, s.SALARY " +
+		"from SALARY s join USER u ON s.USER_ID = u.USER_ID " +
+		"WHERE s.MONTH = ? and s.YEAR = ?"
 	args := []interface{}{month, year}
 
 	if userName != "" {
