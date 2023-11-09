@@ -144,3 +144,46 @@ func handleClassFromToDateById(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
+
+func handleCheckInAttendanceClass(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle checkin class")
+	logger.Infof("Start to check in class API")
+
+	userTokenId, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "Unable to get userId from token", http.StatusUnauthorized)
+		return
+	}
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	var checkInAttendance api_request.ChecInAttendanceClassRequest
+	err = json.Unmarshal(bodyBytes, &checkInAttendance)
+	if err != nil {
+		log.WithError(err).Errorf("Error marshal Check In Attendance Request: %s", err)
+		http.Error(w, "Error marshalling checkin attendance request", http.StatusInternalServerError)
+		return
+	}
+
+	// get the start time of the course to check whether
+	classInformation, err := classService.GetClassInformationByClassId(checkInAttendance.ClassId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error getting class information from db")
+		http.Error(w, "Error getting class information from db", http.StatusInternalServerError)
+		return
+	}
+
+	// add information to ATTENDANCE_HISTORY table
+
+	// return success check in attendance to user
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}

@@ -296,3 +296,5 @@ func (c classService) GetFromToSchedule(fromDate string, toDate string, userId s
 
 	return rs, nil
 }
+
+func (c classService) GetClassInformationByClassId(classId string, ctx context.Context)
