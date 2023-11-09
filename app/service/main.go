@@ -32,6 +32,7 @@ func main() {
 	// by the user in the flags
 	cfgPath, err := api.ParseFlags()
 	if err != nil {
+		log.WithError(err).Errorf("Error setting path to config file: %s", err)
 		log.Fatal(err)
 	}
 

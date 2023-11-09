@@ -121,12 +121,13 @@ func ParseFlags() (string, error) {
 	// Set up a CLI flag called "-config" to allow users
 	// to supply the configuration file
 	flag.StringVar(&configPath, "config", "conf/config.yml", "path to config file")
-
+	log.Infof("the config path is: %s", configPath)
 	// Actually parse the flags
 	flag.Parse()
-
+	log.Infof("here is the foul")
 	// Validate the path first
 	if err := ValidateConfigPath(configPath); err != nil {
+		log.Infof("here is the foul 2")
 		return "", err
 	}
 
