@@ -1047,3 +1047,5 @@ time="2023-11-09T22:26:58+07:00" level=info msg="Server is shutting down due to 
 time="2023-11-09T22:26:58+07:00" level=fatal msg="Server was unable to gracefully shutdown due to err: context deadline exceeded"
 time="2023-11-09T22:27:00+07:00" level=info msg="Hello, service Batman is running"
 time="2023-11-09T22:27:00+07:00" level=fatal msg="stat /conf/config.yml: no such file or directory"
+time="2023-11-09T22:39:03+07:00" level=info msg="Hello, service Batman is running"
+time="2023-11-09T22:39:03+07:00" level=fatal msg="stat education-website/conf/config.yml: no such file or directory"
