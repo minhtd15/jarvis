@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -149,7 +150,8 @@ func NewRouter(config Config) http.Handler {
 	internalRouter.HandleFunc("/insert-students", handleInsertStudents).Methods(http.MethodPost)
 	internalRouter.HandleFunc("/user-schedule", handleClassFromToDateById).Methods(http.MethodGet)
 	internalRouter.HandleFunc("/modify-user-info", handleModifyUserInformation).Methods(http.MethodPut)
-	internalRouter.HandleFunc("/check-in-class", handleCheckInAttendanceClass).Methods(http.MethodPost)
+	//internalRouter.HandleFunc("/check-in-class", handleCheckInAttendanceClass).Methods(http.MethodPost)
+	//internalRouter.HandleFunc("/add-student", handleInsertOneNewStudent).Methods(http.MethodPost)
 
 	// APIs that require token
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()

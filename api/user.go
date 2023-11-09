@@ -296,3 +296,45 @@ func handleModifyUserInformation(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
+
+//func handleInsertOneNewStudent(w http.ResponseWriter, r *http.Request) {
+//	ctx := apm.DetachedContext(r.Context())
+//	logger := GetLoggerWithContext(ctx).WithField("METHOD", "insert one student into class")
+//	logger.Infof("Only leader and admin can insert student")
+//
+//	role, ok := r.Context().Value("role").(string)
+//	if !ok {
+//		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
+//		return
+//	}
+//
+//	if role == "user" {
+//		response := map[string]interface{}{
+//			"message": "You are not allowed to this function",
+//		}
+//		w.Header().Set("Content-Type", "application/json")
+//		w.WriteHeader(http.StatusOK)
+//		json.NewEncoder(w).Encode(response)
+//	}
+//
+//	bodyBytes, err := ioutil.ReadAll(r.Body)
+//	if err != nil {
+//		log.WithError(err).Warningf("Error when reading from request")
+//		http.Error(w, "Invalid format", 252001)
+//		return
+//	}
+//
+//	json.NewDecoder(r.Body)
+//	defer r.Body.Close()
+//
+//	// this is the information that the user type in front end
+//	var rq api_request.NewStudentRequest
+//	err = json.Unmarshal(bodyBytes, &rq)
+//	if err != nil {
+//		log.WithError(err).Errorf("Error marshaling body to modify user information request")
+//		http.Error(w, "Status internal Request", http.StatusInternalServerError)
+//		return
+//	}
+//
+//	err := userService.InsertNewStudent()
+//}

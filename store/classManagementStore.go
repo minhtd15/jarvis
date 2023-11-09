@@ -147,7 +147,7 @@ func (c *classManagementStore) GetCourseInformationStore(request api_request.Cou
 	entity := course_class.CourseEntity{}
 	sqlQuery := "select C.* , CONCAT(CT.CODE, C.COURSE_ID) AS COURSE_NAME, CT.TOTAL_SESSIONS " +
 		"FROM COURSE C join COURSE_TYPE CT " +
-		"where c.COURSE_TYPE_ID = CT.COURSE_TYPE_ID AND C.COURSE_ID = ?"
+		"where C.COURSE_TYPE_ID = CT.COURSE_TYPE_ID AND C.COURSE_ID = ?"
 
 	err := c.db.QueryRowxContext(ctx, sqlQuery, request.CourseId).Scan(&entity.CourseId, &entity.CourseTypeId, &entity.MainTeacher, &entity.Room, &entity.StartDate, &entity.EndDate, &entity.StartTime, &entity.EndTime, &entity.StudyDays, &entity.CourseName, &entity.Location, &entity.TotalSessions)
 	if err != nil {
