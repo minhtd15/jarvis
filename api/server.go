@@ -4,7 +4,6 @@ import (
 	"context"
 	batman "education-website"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
@@ -14,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 )
@@ -116,18 +116,18 @@ func ValidateConfigPath(path string) error {
 // and return the path to be used elsewhere
 func ParseFlags() (string, error) {
 	// String that contains the configured configuration path
-	var configPath string
+	executablePath, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
 
-	// Set up a CLI flag called "-config" to allow users
-	// to supply the configuration file
-	flag.StringVar(&configPath, "config", "conf/config.yml", "path to config file")
+	// Get the absolute path to the config file
+	configPath := filepath.Join(filepath.Dir(executablePath), "conf", "config.yml")
 	log.Infof("the config path is: %s", configPath)
-	// Actually parse the flags
-	flag.Parse()
-	log.Infof("here is the foul")
+
 	// Validate the path first
 	if err := ValidateConfigPath(configPath); err != nil {
-		log.Infof("here is the foul 2")
+		log.Infof("error validating config path: %v", err)
 		return "", err
 	}
 

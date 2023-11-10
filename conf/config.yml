@@ -15,5 +15,3 @@ database:
   user: avnadmin
   pass: AVNS_PRb_ApuInzGLCBw_ux7
   dbName: defaultdb
-
-log:
