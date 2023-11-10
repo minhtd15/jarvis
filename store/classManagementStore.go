@@ -208,12 +208,12 @@ func (c *classManagementStore) GetAllCourseType(ctx context.Context) ([]course_c
 
 func (c *classManagementStore) GetClassFromToDateStore(fromDate string, toDate string, userId string, ctx context.Context) ([]course_class.FromToScheduleEntity, error) {
 	log.Infof("Get all classes for user %s from %s, to %s", userId, fromDate, toDate)
-	sqlQuery := "SELECT c.COURSE_ID, co.COURSE_TYPE_ID, c.START_TIME, c.END_TIME, c.DATE " +
-		"FROM CLASS c " +
-		"JOIN CLASS_MANAGER cm ON c.COURSE_ID = cm.COURSE_ID " +
-		"JOIN COURSE co ON c.COURSE_ID = co.COURSE_ID " +
-		"WHERE cm.USER_ID = ? " +
-		"AND c.DATE >= ? AND c.DATE <= ?"
+	sqlQuery := "SELECT C.COURSE_ID, CO.COURSE_TYPE_ID, C.START_TIME, C.END_TIME, C.DATE " +
+		"FROM CLASS C " +
+		"JOIN CLASS_MANAGER CM ON C.COURSE_ID = CM.COURSE_ID " +
+		"JOIN COURSE CO ON C.COURSE_ID = CO.COURSE_ID " +
+		"WHERE CM.USER_ID = ? " +
+		"AND C.DATE >= ? AND C.DATE <= ?"
 
 	var rs []course_class.FromToScheduleEntity
 	err := c.db.SelectContext(ctx, &rs, sqlQuery, userId, fromDate, toDate)

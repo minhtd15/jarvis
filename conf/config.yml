@@ -15,3 +15,8 @@ database:
   user: avnadmin
   pass: AVNS_PRb_ApuInzGLCBw_ux7
   dbName: defaultdb
+#  host: localhost
+#  port: 3306
+#  user: root
+#  pass: tongminh1510
+#  dbName: EDUDBTEST
