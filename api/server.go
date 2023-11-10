@@ -4,7 +4,6 @@ import (
 	"context"
 	batman "education-website"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
@@ -14,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 )
@@ -114,25 +114,24 @@ func ValidateConfigPath(path string) error {
 
 // ParseFlags will create and parse the CLI flags
 func ParseFlags() (string, error) {
-	// String that contains the configured configuration path
-	configFile := os.Getenv("CONFIG_FILE_PATH")
-	// Use configFile in your application
+	// Get the absolute path to the directory containing the executable
+	executablePath, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
 
-	// Set up a CLI flag called "-config" to allow users
-	// to supply the configuration file
-	flag.StringVar(&configFile, "config", "conf/config.yml", "path to config file")
-
-	// Actually parse the flags
-	flag.Parse()
+	// Get the absolute path to the config file
+	configPath := filepath.Join(filepath.Dir(executablePath), "conf", "config.yml")
+	log.Infof("the config path is: %s", configPath)
 
 	// Validate the path first
-	if err := ValidateConfigPath(configFile); err != nil {
+	if err := ValidateConfigPath(configPath); err != nil {
 		log.Infof("error validating config path: %v", err)
 		return "", err
 	}
 
 	// Return the configuration path
-	return configFile, nil
+	return configPath, nil
 }
 
 // NewRouter generates the router used in the HTTP Server
