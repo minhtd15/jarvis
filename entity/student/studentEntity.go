@@ -1,8 +1,10 @@
 package student
 
+import "time"
+
 type EntityStudent struct {
-	Name    string
-	DOB     string
-	Email   string
-	PhoneNo string
+	Name    string    `db:"NAME"`
+	DOB     time.Time `db:"DOB"`
+	Email   string    `db:"EMAIL"`
+	PhoneNo string    `db:"PHONE_NUMBER"`
 }

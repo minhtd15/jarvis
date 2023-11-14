@@ -1,12 +1,19 @@
 package api
 
 import (
+	"context"
 	batman "education-website"
 	api_request "education-website/api/request"
 	api_response "education-website/api/response"
+	"education-website/commonconstant"
 	"education-website/service/user"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ses"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	_ "github.com/xuri/excelize/v2"
 	"go.elastic.co/apm"
@@ -220,6 +227,15 @@ func handleInsertStudents(w http.ResponseWriter, r *http.Request) {
 	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle insert students information")
 	logger.Infof("Insert all students information from an excel file")
 
+	keys := r.URL.Query()
+	courseId := keys.Get("course_id")
+	if courseId == "" {
+		// courseId is missing, return an error
+		log.Error("course_id parameter is missing")
+		http.Error(w, "course_id parameter is required", http.StatusBadRequest)
+		return
+	}
+
 	err := r.ParseMultipartForm(10 << 20) // 10 MB limit for the uploaded file
 	if err != nil {
 		http.Error(w, "Unable to parse uploaded file", http.StatusBadRequest)
@@ -234,7 +250,20 @@ func handleInsertStudents(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	err = userService.ImportStudentsByExcel(file, ctx)
+	// First need to check whether the course exists in DB or not
+	err = userService.GetCourseExistenceById(courseId, ctx)
+	if err != nil {
+		if errors.Is(err, commonconstant.ErrCourseNotExist) {
+			log.WithError(err).Errorf("Cannot find the courseId %s", courseId)
+			http.Error(w, "Cannot find course according to requirement", http.StatusBadRequest)
+			return
+		}
+		log.WithError(err).Errorf("Error checking course existence: %s", err)
+		http.Error(w, "error checking course existence", http.StatusInternalServerError)
+		return
+	}
+
+	err = userService.ImportStudentsByExcel(file, courseId, ctx)
 	if err != nil {
 		log.WithError(err).Errorf("Error insert student to db by import excel")
 		http.Error(w, "Cannot insert student to db by import excel", http.StatusInternalServerError)
@@ -297,44 +326,139 @@ func handleModifyUserInformation(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-//func handleInsertOneNewStudent(w http.ResponseWriter, r *http.Request) {
-//	ctx := apm.DetachedContext(r.Context())
-//	logger := GetLoggerWithContext(ctx).WithField("METHOD", "insert one student into class")
-//	logger.Infof("Only leader and admin can insert student")
-//
-//	role, ok := r.Context().Value("role").(string)
-//	if !ok {
-//		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
-//		return
-//	}
-//
-//	if role == "user" {
-//		response := map[string]interface{}{
-//			"message": "You are not allowed to this function",
-//		}
-//		w.Header().Set("Content-Type", "application/json")
-//		w.WriteHeader(http.StatusOK)
-//		json.NewEncoder(w).Encode(response)
-//	}
-//
-//	bodyBytes, err := ioutil.ReadAll(r.Body)
-//	if err != nil {
-//		log.WithError(err).Warningf("Error when reading from request")
-//		http.Error(w, "Invalid format", 252001)
-//		return
-//	}
-//
-//	json.NewDecoder(r.Body)
-//	defer r.Body.Close()
-//
-//	// this is the information that the user type in front end
-//	var rq api_request.NewStudentRequest
-//	err = json.Unmarshal(bodyBytes, &rq)
-//	if err != nil {
-//		log.WithError(err).Errorf("Error marshaling body to modify user information request")
-//		http.Error(w, "Status internal Request", http.StatusInternalServerError)
-//		return
-//	}
-//
-//	err := userService.InsertNewStudent()
-//}
+func handleInsertOneNewStudent(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "insert one student into class")
+	logger.Infof("Only leader and admin can insert student")
+
+	role, ok := r.Context().Value("role").(string)
+	if !ok {
+		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
+		return
+	}
+
+	if role == "user" {
+		response := map[string]interface{}{
+			"message": "You are not allowed to this function",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}
+
+	keys := r.URL.Query()
+	courseId := keys.Get("course_id")
+	if courseId == "" {
+		// courseId is missing, return an error
+		log.Error("course_id parameter is missing")
+		http.Error(w, "course_id parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	// First need to check whether the course exists in DB or not
+	err := userService.GetCourseExistenceById(courseId, ctx)
+	if err != nil {
+		if errors.Is(err, commonconstant.ErrCourseNotExist) {
+			log.WithError(err).Errorf("Cannot find the courseId %s", courseId)
+			http.Error(w, "Cannot find course according to requirement", http.StatusBadRequest)
+			return
+		}
+		log.WithError(err).Errorf("Error checking course existence: %s", err)
+		http.Error(w, "error checking course existence", http.StatusInternalServerError)
+		return
+	}
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	// this is the information that the user type in front end
+	var rq api_request.NewStudentRequest
+	err = json.Unmarshal(bodyBytes, &rq)
+	if err != nil {
+		log.WithError(err).Errorf("Error marshaling body to modify user information request")
+		http.Error(w, "Status internal Request", http.StatusInternalServerError)
+		return
+	}
+
+	err = userService.InsertOneStudentService(rq, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error insert student %s", rq.Name)
+		http.Error(w, "Unable to insert one new student", http.StatusInternalServerError)
+		return
+	}
+
+	log.Infof("Successful update student %s information", rq.Name)
+	response := map[string]interface{}{
+		"message": "Successful insert one student list to database",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func handleEmailJobs(w http.ResponseWriter, r *http.Request) {
+	log.Infof("Start to send email")
+
+	// Replace these values with your AWS credentials and SES region
+	accessKey := "AKIARRJQQHPNOGS3BIUC"
+	secretKey := "ROf1eSmtSasK2KBcAOrxrVSr7ocmkImI/X0aN/x+"
+	region := "ap-southeast-2"
+
+	// Create a new AWS session
+	sess, err := session.NewSession(&aws.Config{
+		Region:      aws.String(region),
+		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, ""),
+	})
+	if err != nil {
+		log.Errorf("Error creating AWS session: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Create an SES client
+	svc := ses.New(sess)
+
+	// Specify the sender email address
+	sender := "ducminhtong1510@gmail.com"
+
+	// Specify the recipient email address
+	recipient := "minhtom1510@gmail.com"
+
+	// Specify the email subject and body
+	subject := "Test Email"
+	body := "This is a test email sent using Amazon SES."
+
+	// Send the email
+	_, err = svc.SendEmailWithContext(context.TODO(), &ses.SendEmailInput{
+		Source: aws.String(sender),
+		Destination: &ses.Destination{
+			ToAddresses: []*string{aws.String(recipient)},
+		},
+		Message: &ses.Message{
+			Subject: &ses.Content{
+				Data: aws.String(subject),
+			},
+			Body: &ses.Body{
+				Text: &ses.Content{
+					Data: aws.String(body),
+				},
+			},
+		},
+	})
+	if err != nil {
+		log.Errorf("Error sending email: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	log.Infof("Email sent successfully")
+	fmt.Fprint(w, "Email sent successfully")
+}

@@ -46,8 +46,8 @@ func (c *classManagementStore) InsertNewCourseStore(entity course_class.CourseEn
 	}()
 
 	// Insert into COURSE table
-	sqlCourse := "INSERT INTO COURSE (COURSE_TYPE_ID, MAIN_TEACHER, ROOM, START_DATE, END_DATE, STUDY_DAYS, LOCATION) VALUES (?, ?, ?, ?, ?, ?, ?)"
-	_, err = tx.Exec(sqlCourse, entity.CourseTypeId, entity.MainTeacher, entity.Room, entity.StartDate, entity.EndDate, entity.StudyDays, rq.Location)
+	sqlCourse := "INSERT INTO COURSE (COURSE_TYPE_ID, MAIN_TEACHER, ROOM, START_DATE, END_DATE, START_TIME, END_TIME, STUDY_DAYS, LOCATION) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	_, err = tx.Exec(sqlCourse, entity.CourseTypeId, entity.MainTeacher, entity.Room, entity.StartDate, entity.EndDate, rq.StartTime, rq.EndTime, entity.StudyDays, rq.Location)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to insert course into the database")
 		return err
@@ -61,23 +61,6 @@ func (c *classManagementStore) InsertNewCourseStore(entity course_class.CourseEn
 		return err
 	}
 
-	// Insert into CLASS table for each schedule entry
-	sqlClass := "INSERT INTO CLASS (COURSE_ID, START_TIME, END_TIME, DATE, ROOM, TYPE_CLASS) VALUES (?, ?, ?, ?, ?, ?)"
-	stmt, err := tx.Prepare(sqlClass)
-	if err != nil {
-		log.WithError(err).Errorf("Failed to prepare SQL statement for CLASS")
-		return err
-	}
-	defer stmt.Close()
-
-	for _, v := range schedule {
-		_, err := stmt.Exec(courseID, rq.StartTime, rq.EndTime, v, entity.Room, rq.TypeCourseCode)
-		if err != nil {
-			log.WithError(err).Errorf("Failed to insert class into the database")
-			return err
-		}
-	}
-
 	var userId string
 	err = tx.QueryRow("SELECT USER_ID FROM USER WHERE USERNAME = ?", entity.MainTeacher).Scan(&userId)
 	if err != nil {
@@ -85,17 +68,37 @@ func (c *classManagementStore) InsertNewCourseStore(entity course_class.CourseEn
 		return err
 	}
 
-	// insert default main teacher in every class of this course
-	sqlQuery := "INSERT INTO CLASS_MANAGER VALUES (?, ?, ?, ?)"
-	stmt, err = tx.Prepare(sqlQuery)
+	// Insert into CLASS table for each schedule entry
+	sqlClass := "INSERT INTO CLASS (COURSE_ID, START_TIME, END_TIME, DATE, ROOM, TYPE_CLASS) VALUES (?, ?, ?, ?, ?, ?)"
+	stmt, err := tx.Prepare(sqlClass)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to prepare SQL statement for CLASS")
+		return err
+	}
+
+	// insert default main teacher in every class of this course
+	sqlQuery := "INSERT INTO CLASS_MANAGER (USER_ID, COURSE_ID, CLASS_ROLE, CLASS_DATE) VALUES (?, ?, ?, ?)"
+	tmp, err := tx.Prepare(sqlQuery)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to prepare SQL statement for CLASS_MANAGER")
 		return err
 	}
 	defer stmt.Close()
 
 	for _, v := range schedule {
-		_, err := stmt.Exec(userId, courseID, "Teacher", v.Format("2006-01-02"))
+		rs, err := stmt.Exec(courseID, rq.StartTime, rq.EndTime, v, entity.Room, "1")
+		if err != nil {
+			log.WithError(err).Errorf("Failed to insert class into the database")
+			return err
+		}
+
+		id, err := rs.LastInsertId()
+		if err != nil {
+			log.WithError(err).Errorf("Failed to get last insert ID")
+			return err
+		}
+
+		_, err = tmp.Exec(userId, id, "Teacher", v.Format("2006-01-02"))
 		if err != nil {
 			log.WithError(err).Errorf("Failed to insert main teacher into the database")
 			return err

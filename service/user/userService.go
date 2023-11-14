@@ -7,11 +7,13 @@ import (
 	api_response "education-website/api/response"
 	"education-website/entity/student"
 	"education-website/entity/user"
+	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/xuri/excelize/v2"
 	"golang.org/x/crypto/bcrypt"
 	"mime/multipart"
+	"net/smtp"
 	"strconv"
 	"strings"
 	"time"
@@ -215,7 +217,7 @@ func ExportToExcel(data []api_response.SalaryAPIResponse) (*excelize.File, error
 	return file, nil
 }
 
-func (u userService) ImportStudentsByExcel(file multipart.File, ctx context.Context) error {
+func (u userService) ImportStudentsByExcel(file multipart.File, courseId string, ctx context.Context) error {
 	// Read the Excel file
 	f, err := excelize.OpenReader(file)
 	if err != nil {
@@ -250,9 +252,14 @@ func (u userService) ImportStudentsByExcel(file multipart.File, ctx context.Cont
 		email := u.rowToColumnValue(row, emailColumn)
 		phone := u.rowToColumnValue(row, phoneColumn)
 
+		dobTmp, err := time.Parse("2006-01-02", dob)
+		if err != nil {
+			log.WithError(err).Errorf("Unable to parse time")
+			return err
+		}
 		rowData := student.EntityStudent{
 			Name:    studentName,
-			DOB:     dob,
+			DOB:     dobTmp,
 			Email:   email,
 			PhoneNo: phone,
 		}
@@ -260,7 +267,7 @@ func (u userService) ImportStudentsByExcel(file multipart.File, ctx context.Cont
 		studentData = append(studentData, rowData)
 	}
 
-	err = u.userStore.InsertStudentStore(studentData, ctx)
+	err = u.userStore.InsertStudentStore(studentData, courseId, ctx)
 	if err != nil {
 		log.WithError(err).Errorf("Error inserting student data to database")
 		return err
@@ -284,4 +291,53 @@ func (u userService) rowToColumnValue(row []string, column string) string {
 
 func (u userService) ModifyUserService(rq api_request.ModifyUserInformationRequest, userId string, ctx context.Context) error {
 	return u.userStore.ModifyUserInformationStore(rq, userId, ctx)
+}
+
+func (u userService) InsertOneStudentService(request api_request.NewStudentRequest, ctx context.Context) error {
+	return u.userStore.InsertOneStudentStore(request, ctx)
+}
+
+func (u userService) sendDailyEmail() {
+	// Dữ liệu cần hiển thị trong email (ví dụ)
+	data := "Dữ liệu của bạn: <strong>Thông tin lịch làm ngày hôm nay</strong>"
+
+	// Định dạng nội dung email với dữ liệu
+	emailBody := fmt.Sprintf("<html><body>%s</body></html>", data)
+
+	// Gửi email
+	err := sendEmail("recipient@example.com", "Subject: Daily Schedule", emailBody)
+	if err != nil {
+		fmt.Println("Error sending email:", err)
+	}
+}
+
+func sendEmail(recipient, subject, body string) error {
+	// Địa chỉ email và mật khẩu của người gửi
+	from := "your_email@gmail.com"
+	password := "your_password"
+
+	// Địa chỉ SMTP server và cổng
+	smtpServer := "smtp.gmail.com"
+	smtpPort := 587
+
+	// Tạo một cấu trúc đại diện cho thông tin đăng nhập
+	auth := smtp.PlainAuth("", from, password, smtpServer)
+
+	// Định dạng nội dung email dưới dạng HTML
+	message := fmt.Sprintf("Subject: %s\r\n", subject)
+	message += "MIME-version: 1.0;\r\n"
+	message += "Content-Type: text/html; charset=\"UTF-8\";\r\n"
+	message += "\r\n" + body
+
+	// Gửi email
+	err := smtp.SendMail(fmt.Sprintf("%s:%d", smtpServer, smtpPort), auth, from, []string{recipient}, []byte(message))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u userService) GetCourseExistenceById(courseId string, ctx context.Context) error {
+	return u.userStore.CheckCourseExistence(courseId, ctx)
 }

@@ -113,6 +113,7 @@ func ValidateConfigPath(path string) error {
 }
 
 // ParseFlags will create and parse the CLI flags
+// and return the path to be used elsewhere
 func ParseFlags() (string, error) {
 	// String that contains the configured configuration path
 	configFile := os.Getenv("CONFIG_FILE_PATH")
@@ -152,7 +153,8 @@ func NewRouter(config Config) http.Handler {
 	internalRouter.HandleFunc("/user-schedule", handleClassFromToDateById).Methods(http.MethodGet)
 	internalRouter.HandleFunc("/modify-user-info", handleModifyUserInformation).Methods(http.MethodPut)
 	//internalRouter.HandleFunc("/check-in-class", handleCheckInAttendanceClass).Methods(http.MethodPost)
-	//internalRouter.HandleFunc("/add-student", handleInsertOneNewStudent).Methods(http.MethodPost)
+	internalRouter.HandleFunc("/add-student", handleInsertOneNewStudent).Methods(http.MethodPost)
+	//internalRouter.HandleFunc("/user-role", handleGetUserByRole).Methods(http.MethodGet)
 
 	// APIs that require token
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()
@@ -162,6 +164,12 @@ func NewRouter(config Config) http.Handler {
 	externalRouter.HandleFunc("/class-info", handleGetClassInformation).Methods(http.MethodGet)
 	externalRouter.HandleFunc("/all-courses", handleGetAllCourseInformation).Methods(http.MethodGet)
 	//internalRouter.HandleFunc("/class-information", handleGetClassInformation).Methods(http.MethodGet)
+	externalRouter.HandleFunc("/send-email", handleEmailJobs).Methods(http.MethodPost)
+
+	// Set up cron job to run sendDailyEmail at 7 AM daily
+	//con := cron.New()
+	//con.AddFunc("0 7 * * *", userService.sendDailyEmail)
+	//con.Start()
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000"},

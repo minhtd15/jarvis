@@ -33,7 +33,7 @@ func (c classService) AddNewClass(request api_request.NewCourseRequest, ctx cont
 	// get total sessions of type course
 	totalSessions, courseTypeId, err := c.classStore.GetSessionsByCourseType(request.CourseType, ctx)
 	if err != nil {
-		log.WithError(err).Errorf("Unable to get total sessions of type class: %s", request.TypeCourseCode)
+		log.WithError(err).Errorf("Unable to get total sessions of type class: %s", request.CourseType)
 		return err
 	}
 

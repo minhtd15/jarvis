@@ -5,11 +5,13 @@ import (
 	"database/sql"
 	batman "education-website"
 	api_request "education-website/api/request"
+	"education-website/commonconstant"
 	"education-website/entity/salary"
 	"education-website/entity/student"
 	"education-website/entity/user"
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 type userManagementStore struct {
@@ -168,7 +170,7 @@ func (u *userManagementStore) ModifySalaryConfigurationStore(userId string, user
 	return nil
 }
 
-func (u *userManagementStore) InsertStudentStore(data []student.EntityStudent, ctx context.Context) error {
+func (u *userManagementStore) InsertStudentStore(data []student.EntityStudent, courseId string, ctx context.Context) error {
 	log.Infof("Insert to db students list")
 
 	tx, err := u.db.Begin()
@@ -196,10 +198,29 @@ func (u *userManagementStore) InsertStudentStore(data []student.EntityStudent, c
 		log.WithError(err).Errorf("Failed to prepare SQL statement for CLASS")
 		return err
 	}
+
+	sqlQuery := "INSERT INTO COURSE_MANAGER (STUDENT_ID, COURSE_ID) VALUES (?, ?)"
+	tmp, err := tx.Prepare(sqlQuery)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to prepare SQL statement for CLASS")
+		return err
+	}
 	defer stmt.Close()
 
 	for _, v := range data {
-		_, err := stmt.Exec(v.Name, v.DOB, v.Email, v.PhoneNo)
+		rs, err := stmt.Exec(v.Name, v.DOB, v.Email, v.PhoneNo)
+		if err != nil {
+			log.WithError(err).Errorf("Failed to insert class into the database")
+			return err
+		}
+
+		id, err := rs.LastInsertId()
+		if err != nil {
+			log.WithError(err).Errorf("Failed to get last insert ID")
+			return err
+		}
+
+		_, err = tmp.Exec(id, courseId)
 		if err != nil {
 			log.WithError(err).Errorf("Failed to insert class into the database")
 			return err
@@ -221,5 +242,75 @@ func (u *userManagementStore) ModifyUserInformationStore(rq api_request.ModifyUs
 	}
 
 	log.Infof("Successful update user information")
+	return nil
+}
+
+func (u *userManagementStore) InsertOneStudentStore(rq api_request.NewStudentRequest, ctx context.Context) error {
+	log.Infof("Insert one student to database")
+
+	dob, err := time.Parse("2006-01-02", rq.DOB)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to parse dob for student: %s", err)
+		return err
+	}
+
+	tmp := student.EntityStudent{
+		Name:    rq.Name,
+		DOB:     dob,
+		Email:   rq.Email,
+		PhoneNo: rq.PhoneNumber,
+	}
+
+	tx, err := u.db.Begin()
+	if err != nil {
+		log.WithError(err).Errorf("Failed to begin transaction")
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			log.WithError(err).Errorf("Rolling back transaction")
+			tx.Rollback()
+			return
+		}
+		err = tx.Commit()
+		if err != nil {
+			log.WithError(err).Errorf("Error committing transaction")
+		}
+	}()
+
+	// Insert into COURSE table
+	sqlClass := "INSERT INTO STUDENT (STUDENT_NAME, DOB, EMAIL, PHONE_NUMBER) VALUES (?, ?, ?, ?)"
+	stmt, err := tx.Prepare(sqlClass)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to prepare SQL statement for CLASS")
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(tmp.Name, tmp.DOB, tmp.Email, tmp.PhoneNo)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to insert class into the database")
+		return err
+	}
+	return nil
+}
+
+func (u *userManagementStore) CheckCourseExistence(courseId string, ctx context.Context) error {
+	log.Infof("Start to check course existence in db store")
+
+	var count int
+	sqlQuery := "SELECT COUNT(*) FROM COURSE WHERE COURSE_ID = ?"
+	err := u.db.GetContext(ctx, &count, sqlQuery, courseId)
+	if err != nil {
+		log.WithError(err).Errorf("Error checking existence for course %s", courseId)
+		return err
+	}
+
+	if count == 0 {
+		log.Infof("Course %s does not exist", courseId)
+		return commonconstant.ErrCourseNotExist
+	}
+
+	log.Infof("Course %s exists", courseId)
 	return nil
 }

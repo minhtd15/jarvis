@@ -38,8 +38,10 @@ type UserService interface {
 	ChangePassword(changePasswordRequest api_request.ChangePasswordRequest, userName string, ctx context.Context) error
 	GetSalaryInformation(userName string, month string, year string, ctx context.Context) ([]*api_response.SalaryAPIResponse, error)
 	ModifySalaryConfiguration(userSalaryInfo api_request.ModifySalaryConfRequest, ctx context.Context) error
-	ImportStudentsByExcel(file multipart.File, ctx context.Context) error
+	ImportStudentsByExcel(file multipart.File, courseId string, ctx context.Context) error
 	ModifyUserService(rq api_request.ModifyUserInformationRequest, userId string, ctx context.Context) error
+	InsertOneStudentService(request api_request.NewStudentRequest, ctx context.Context) error
+	GetCourseExistenceById(courseId string, ctx context.Context) error
 }
 
 type UserStore interface {
@@ -48,6 +50,8 @@ type UserStore interface {
 	UpdateNewPassword(newPassword []byte, userName string) error
 	GetSalaryReportStore(userName string, month string, year string, ctx context.Context) ([]salary.SalaryEntity, error)
 	ModifySalaryConfigurationStore(userId string, userSalaryInfo []api_request.SalaryConfiguration, ctx context.Context) error
-	InsertStudentStore(data []student.EntityStudent, ctx context.Context) error
+	InsertStudentStore(data []student.EntityStudent, courseId string, ctx context.Context) error
 	ModifyUserInformationStore(rq api_request.ModifyUserInformationRequest, userId string, ctx context.Context) error
+	InsertOneStudentStore(rq api_request.NewStudentRequest, ctx context.Context) error
+	CheckCourseExistence(courseId string, ctx context.Context) error
 }
