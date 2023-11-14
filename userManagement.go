@@ -19,16 +19,16 @@ type UserRequest struct {
 }
 
 type UserResponse struct {
-	UserId      string
-	UserName    string
-	DOB         string
-	Email       string
-	JobPosition string
-	Role        string
-	StartDate   string
-	Password    string
-	FullName    string
-	Gender      string
+	UserId      string `json:"user_id"`
+	UserName    string `json:"user_name"`
+	DOB         string `json:"dob"`
+	Email       string `json:"email"`
+	JobPosition string `json:"job_position"`
+	Role        string `json:"role"`
+	StartDate   string `json:"start_date"`
+	Password    string `json:"password"`
+	FullName    string `json:"full_name"`
+	Gender      string `json:"gender"`
 }
 
 type UserService interface {
@@ -42,6 +42,7 @@ type UserService interface {
 	ModifyUserService(rq api_request.ModifyUserInformationRequest, userId string, ctx context.Context) error
 	InsertOneStudentService(request api_request.NewStudentRequest, ctx context.Context) error
 	GetCourseExistenceById(courseId string, ctx context.Context) error
+	GetAllUserByJobPosition(jobPos string, ctx context.Context) ([]*UserResponse, error)
 }
 
 type UserStore interface {
@@ -54,4 +55,5 @@ type UserStore interface {
 	ModifyUserInformationStore(rq api_request.ModifyUserInformationRequest, userId string, ctx context.Context) error
 	InsertOneStudentStore(rq api_request.NewStudentRequest, ctx context.Context) error
 	CheckCourseExistence(courseId string, ctx context.Context) error
+	GetUserByJobPosition(jobPos string, ctx context.Context) ([]user.UserEntity, error)
 }

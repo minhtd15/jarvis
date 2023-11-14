@@ -341,3 +341,30 @@ func sendEmail(recipient, subject, body string) error {
 func (u userService) GetCourseExistenceById(courseId string, ctx context.Context) error {
 	return u.userStore.CheckCourseExistence(courseId, ctx)
 }
+
+func (u userService) GetAllUserByJobPosition(jobPos string, ctx context.Context) ([]*batman.UserResponse, error) {
+	log.Infof("Start service get all %s user", jobPos)
+	userList, err := u.userStore.GetUserByJobPosition(jobPos, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error get all %s user from db", jobPos)
+		return nil, err
+	}
+
+	var rs []*batman.UserResponse
+	for _, v := range userList {
+		var tmp = batman.UserResponse{
+			UserId: v.UserId,
+			UserName: v.UserName,
+			DOB: v.DOB,
+			Email: v.Email,
+			JobPosition: v.JobPosition,
+			Role: v.Role,
+			StartDate: v.StartingDate,
+			FullName: v.FullName,
+		}
+		rs = append(rs, &tmp)
+	}
+
+	log.Infof("Done service get user by job position")
+	return rs, nil
+}

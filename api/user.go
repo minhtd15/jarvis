@@ -462,3 +462,33 @@ func handleEmailJobs(w http.ResponseWriter, r *http.Request) {
 	log.Infof("Email sent successfully")
 	fmt.Fprint(w, "Email sent successfully")
 }
+
+func handleGetUserByRole(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "get all teacher or role according to request")
+	logger.Infof("get user who are teacher or TA according to request")
+
+	keys := r.URL.Query()
+	jobPos := keys.Get("job_position")
+	if jobPos == "" || (jobPos != "Teacher" && jobPos != "TA") {
+		// courseId is missing, return an error
+		log.Error("Job position parameter is missing or job Position is not Teacher or TA")
+		http.Error(w, "job position parameter is required or job position must be Teacher or TA in the right format", http.StatusBadRequest)
+		return
+	}
+
+	userList, err := userService.GetAllUserByJobPosition(jobPos, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error getting users who are %s", jobPos)
+		http.Error(w, "Cannot get teacher/TA", http.StatusInternalServerError)
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful get  " + jobPos,
+		"data":    userList,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}

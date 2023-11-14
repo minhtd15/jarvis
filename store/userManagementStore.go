@@ -314,3 +314,49 @@ func (u *userManagementStore) CheckCourseExistence(courseId string, ctx context.
 	log.Infof("Course %s exists", courseId)
 	return nil
 }
+
+func (u *userManagementStore) GetUserByJobPosition(jobPos string, ctx context.Context) ([]user.UserEntity, error) {
+	log.Infof("Start to get user by job position")
+
+	var entities []user.UserEntity
+	sqlQuery := "SELECT * FROM USER WHERE JOB_POSITION = ?"
+
+	// Execute the SQL query
+	rows, err := u.db.QueryContext(ctx, sqlQuery, jobPos)
+	if err != nil {
+		log.Errorf("Error executing SQL query: %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Iterate through the result set and scan into UserEntity structs
+	for rows.Next() {
+		var entity user.UserEntity
+		err := rows.Scan(
+			&entity.UserId,
+			&entity.UserName,
+			&entity.Email,
+			&entity.Role,
+			&entity.DOB,
+			&entity.JobPosition,
+			&entity.StartingDate,
+			&entity.Password,
+			&entity.Gender,
+			&entity.FullName,
+		)
+		if err != nil {
+			log.Errorf("Error scanning row: %v", err)
+			return nil, err
+		}
+		entities = append(entities, entity)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Errorf("Error iterating through result set: %v", err)
+		return nil, err
+	}
+
+	log.Infof("Successfully retrieved users by job position")
+	return entities, nil
+}
+
