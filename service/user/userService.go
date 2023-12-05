@@ -155,26 +155,30 @@ func (u userService) GetSalaryInformation(userName string, month string, year st
 				JobPosition: repoRes.JobPosition,
 			}
 
+			userSalaryConfig, err := u.userStore.GetUserSalaryConfigStore(x.UserId, ctx)
+			if err != nil {
+				log.WithError(err).Errorf("Error getting user salary config")
+				return nil, err
+			}
+
 			salaryInfo := make([]api_response.SalaryInformation, 0)
 			info := api_response.SalaryInformation{
-				PayrollId:  repoRes.PayrollId,
-				CourseType: repoRes.TypeWork,
-				WorkDays:   repoRes.TotalWorkDates,
-				PriceEach:  repoRes.PayrollPerSessions,
-				Amount:     repoRes.TotalSalary,
+				PayrollId: repoRes.PayrollId,
+				WorkDays:  repoRes.TotalWorkDates,
+				Amount:    repoRes.TotalSalary,
 			}
 			salaryInfo = append(salaryInfo, info)
 			x.Salary = salaryInfo
+			x.SalaryConfig = userSalaryConfig
 			res = append(res, &x)
 		} else {
 			for i := range res {
 				if res[i].UserName == repoRes.UserName {
 					salary := res[i].Salary
 					info := api_response.SalaryInformation{
-						CourseType: repoRes.TypeWork,
-						WorkDays:   repoRes.TotalWorkDates,
-						PriceEach:  repoRes.PayrollPerSessions,
-						Amount:     repoRes.TotalSalary,
+						PayrollId: repoRes.PayrollId,
+						WorkDays:  repoRes.TotalWorkDates,
+						Amount:    repoRes.TotalSalary,
 					}
 					salary = append(salary, info)
 					res[i].Salary = salary
@@ -207,9 +211,7 @@ func ExportToExcel(data []api_response.SalaryAPIResponse) (*excelize.File, error
 		// Ghi dữ liệu SalaryInformation vào các cột tương ứng
 		for i, salaryInfo := range item.Salary {
 			col := string('E' + i)
-			file.SetCellValue("Sheet1", col+strconv.Itoa(row), salaryInfo.CourseType)
 			file.SetCellValue("Sheet1", col+strconv.Itoa(row+1), salaryInfo.WorkDays)
-			file.SetCellValue("Sheet1", col+strconv.Itoa(row+2), salaryInfo.PriceEach)
 			file.SetCellValue("Sheet1", col+strconv.Itoa(row+3), salaryInfo.Amount)
 		}
 	}
@@ -297,7 +299,7 @@ func (u userService) InsertOneStudentService(request api_request.NewStudentReque
 	return u.userStore.InsertOneStudentStore(request, ctx)
 }
 
-func (u userService) sendDailyEmail() {
+func SendDailyEmail() {
 	// Dữ liệu cần hiển thị trong email (ví dụ)
 	data := "Dữ liệu của bạn: <strong>Thông tin lịch làm ngày hôm nay</strong>"
 
@@ -305,7 +307,7 @@ func (u userService) sendDailyEmail() {
 	emailBody := fmt.Sprintf("<html><body>%s</body></html>", data)
 
 	// Gửi email
-	err := sendEmail("recipient@example.com", "Subject: Daily Schedule", emailBody)
+	err := sendEmail("cthanhnguyen03@gmail.com", "Subject: Daily Schedule", emailBody)
 	if err != nil {
 		fmt.Println("Error sending email:", err)
 	}
@@ -313,8 +315,8 @@ func (u userService) sendDailyEmail() {
 
 func sendEmail(recipient, subject, body string) error {
 	// Địa chỉ email và mật khẩu của người gửi
-	from := "your_email@gmail.com"
-	password := "your_password"
+	from := "ducminhtong1510@gmail.com"
+	password := "hiks irqs gwyz eygn"
 
 	// Địa chỉ SMTP server và cổng
 	smtpServer := "smtp.gmail.com"
@@ -353,18 +355,38 @@ func (u userService) GetAllUserByJobPosition(jobPos string, ctx context.Context)
 	var rs []*batman.UserResponse
 	for _, v := range userList {
 		var tmp = batman.UserResponse{
-			UserId: v.UserId,
-			UserName: v.UserName,
-			DOB: v.DOB,
-			Email: v.Email,
+			UserId:      v.UserId,
+			UserName:    v.UserName,
+			DOB:         v.DOB,
+			Email:       v.Email,
 			JobPosition: v.JobPosition,
-			Role: v.Role,
-			StartDate: v.StartingDate,
-			FullName: v.FullName,
+			Role:        v.Role,
+			StartDate:   v.StartingDate,
+			FullName:    v.FullName,
 		}
 		rs = append(rs, &tmp)
 	}
 
 	log.Infof("Done service get user by job position")
+	return rs, nil
+}
+
+func (u userService) GetStudentByCourseId(courseId string, ctx context.Context) ([]api_response.StudentResponse, error) {
+	log.Infof("Get student info by course ID")
+
+	studentEntity, err := u.userStore.GetStudentByCourseIdStore(courseId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error get all student in course %s from db", courseId)
+		return nil, err
+	}
+	var rs []api_response.StudentResponse
+	for _, v := range studentEntity {
+		tmp := api_response.StudentResponse{
+			StudentId:   v.Id,
+			StudentName: v.Name,
+			Dob:         v.DOB,
+		}
+		rs = append(rs, tmp)
+	}
 	return rs, nil
 }

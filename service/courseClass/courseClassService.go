@@ -300,3 +300,11 @@ func (c classService) GetFromToSchedule(fromDate string, toDate string, userId s
 func (c classService) GetClassInformationByClassId(classId string, ctx context.Context) {
 
 }
+
+func (c classService) DeleteCourseByCourseId(courseId string, ctx context.Context) error {
+	return c.classStore.DeleteCourseById(courseId, ctx)
+}
+
+func (c classService) GetCourseSessionsService(courseId string, ctx context.Context) ([]string, error) {
+	return c.classStore.GetScheduleByCourseIdStore(courseId, ctx)
+}

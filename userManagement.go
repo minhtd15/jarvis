@@ -43,6 +43,7 @@ type UserService interface {
 	InsertOneStudentService(request api_request.NewStudentRequest, ctx context.Context) error
 	GetCourseExistenceById(courseId string, ctx context.Context) error
 	GetAllUserByJobPosition(jobPos string, ctx context.Context) ([]*UserResponse, error)
+	GetStudentByCourseId(courseId string, ctx context.Context) ([]api_response.StudentResponse, error)
 }
 
 type UserStore interface {
@@ -56,4 +57,6 @@ type UserStore interface {
 	InsertOneStudentStore(rq api_request.NewStudentRequest, ctx context.Context) error
 	CheckCourseExistence(courseId string, ctx context.Context) error
 	GetUserByJobPosition(jobPos string, ctx context.Context) ([]user.UserEntity, error)
+	GetUserSalaryConfigStore(userId string, ctx context.Context) ([]api_response.SalaryConfig, error)
+	GetStudentByCourseIdStore(courseId string, ctx context.Context) ([]student.EntityStudent, error)
 }

@@ -492,3 +492,111 @@ func handleGetUserByRole(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
+
+func handleDeleteCourse(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "delete course according to request")
+	logger.Infof("API Delete course")
+
+	role, ok := r.Context().Value("role").(string)
+	if !ok {
+		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
+		return
+	}
+
+	if role == "user" {
+		response := map[string]interface{}{
+			"message": "You are not allowed to this function",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}
+
+	keys := r.URL.Query()
+	courseId := keys.Get("course_id")
+	if courseId == "" {
+		// courseId is missing, return an error
+		log.Error("CourseId parameter is missing")
+		http.Error(w, "CourseId parameter is required ", http.StatusBadRequest)
+		return
+	}
+
+	err := classService.DeleteCourseByCourseId(courseId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error delete COURSE %s", courseId)
+		http.Error(w, "Error delete course. Please try again", http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
+//func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
+//	ctx := apm.DetachedContext(r.Context())
+//	logger := GetLoggerWithContext(ctx).WithField("METHOD", "delete course according to request")
+//	logger.Infof("API Delete course")
+//
+//	role, ok := r.Context().Value("role").(string)
+//	if !ok {
+//		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
+//		return
+//	}
+//
+//	if role == "user" {
+//		response := map[string]interface{}{
+//			"message": "You are not allowed to this function",
+//		}
+//		w.Header().Set("Content-Type", "application/json")
+//		w.WriteHeader(http.StatusOK)
+//		json.NewEncoder(w).Encode(response)
+//	}
+//
+//	keys := r.URL.Query()
+//	userId := keys.Get("user_id")
+//	if userId == "" {
+//		// courseId is missing, return an error
+//		log.Error("UserId parameter is missing")
+//		http.Error(w, "UserId parameter is required ", http.StatusBadRequest)
+//		return
+//	}
+//
+//	err := userService.DeleteUserByIdService(userId, ctx)
+//	if err != nil {
+//		log.WithError(err).Errorf("Error delete user %s", userId)
+//		http.Error(w, commonconstant.ErrUserNotExist, http.StatusBadRequest)
+//	}
+//}
+
+func handleSendDailyEmail(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "delete course according to request")
+	logger.Infof("API Delete course")
+
+	user.SendDailyEmail()
+}
+
+func getStudentsByCourse(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "get students by course Id")
+	logger.Infof("get students by course id")
+
+	keys := r.URL.Query()
+	courseId := keys.Get("courseId")
+
+	studentList, err := userService.GetStudentByCourseId(courseId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to get students via course ID service")
+		http.Error(w, "Unable to get students via course ID service", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful get student list for course",
+		"data":    studentList,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}

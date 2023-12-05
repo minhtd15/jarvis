@@ -187,3 +187,27 @@ func handleClassFromToDateById(w http.ResponseWriter, r *http.Request) {
 //	w.Header().Set("Content-Type", "application/json")
 //	w.WriteHeader(http.StatusOK)
 //}
+
+func getCourseAllSessions(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle get course all sessions")
+	logger.Infof("Get class all sessions")
+
+	keys := r.URL.Query()
+	courseId := keys.Get("courseId")
+
+	result, err := classService.GetCourseSessionsService(courseId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to get course sessions service")
+		http.Error(w, "unable to get course session api", http.StatusInternalServerError)
+		return
+	}
+	response := map[string]interface{}{
+		"message": "Successful getting schedule information",
+		"data":    result,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}

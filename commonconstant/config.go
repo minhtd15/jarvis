@@ -8,3 +8,4 @@ const (
 )
 
 var ErrCourseNotExist = errors.New("Course you request does not exist")
+var ErrUserNotExist = errors.New("User not exist")

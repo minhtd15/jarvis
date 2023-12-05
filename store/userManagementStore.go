@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	batman "education-website"
 	api_request "education-website/api/request"
+	api_response "education-website/api/response"
 	"education-website/commonconstant"
 	"education-website/entity/salary"
 	"education-website/entity/student"
@@ -360,3 +361,74 @@ func (u *userManagementStore) GetUserByJobPosition(jobPos string, ctx context.Co
 	return entities, nil
 }
 
+func (u *userManagementStore) GetUserSalaryConfigStore(userId string, ctx context.Context) ([]api_response.SalaryConfig, error) {
+	log.Infof("Start to get user salary config")
+
+	var entities []api_response.SalaryConfig
+	args := []interface{}{userId}
+	sqlQuery := "SELECT ER.USER_ID, ER.PAYROLL_ID, P.TYPE_PAYROLL, ER.PAYROLL_RATE FROM EMPLOYEE_RATE ER JOIN PAYROLL P ON ER.PAYROLL_ID = P.PAYROLL_ID WHERE USER_ID = ?"
+
+	rows, err := u.db.QueryxContext(ctx, sqlQuery, args...)
+	if err != nil {
+		log.WithError(err).Errorf("Cannot get info from the database for user: %s", userId)
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var tmpUserId string
+	for rows.Next() {
+		var entity api_response.SalaryConfig
+		if err := rows.Scan(&tmpUserId, &entity.PayrollId, &entity.TypePayroll, &entity.PayrollRate); err != nil {
+			log.WithError(err).Errorf("Error scanning row: %s", err.Error())
+			return nil, err
+		}
+		entities = append(entities, entity)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.WithError(err).Errorf("Error iterating rows: %s", err.Error())
+		return nil, err
+	}
+	return entities, nil
+}
+
+func (u *userManagementStore) GetStudentByCourseIdStore(courseId string, ctx context.Context) ([]student.EntityStudent, error) {
+	log.Infof("Get student by course Id store")
+
+	var entities []student.EntityStudent
+	var sqlQuery string
+	var rows *sqlx.Rows
+	sqlQuery = "SELECT S.* FROM STUDENT S JOIN COURSE_MANAGER CM ON S.STUDENT_ID = CM.STUDENT_ID WHERE CM.COURSE_ID = ?"
+	args := []interface{}{courseId}
+
+	rows, err := u.db.QueryxContext(ctx, sqlQuery, args...)
+	if err != nil {
+		log.WithError(err).Errorf("Cannot get info from the database for course: %s", courseId)
+		return nil, err
+	}
+
+	defer rows.Close()
+	var dob string
+
+	for rows.Next() {
+		var entity student.EntityStudent
+		if err := rows.Scan(&entity.Id, &entity.Name, &dob, &entity.Email, &entity.PhoneNo); err != nil {
+			log.WithError(err).Errorf("Error scanning row: %s", err.Error())
+			return nil, err
+		}
+		entity.DOB, err = time.Parse("2006-01-02", dob)
+		if err != nil {
+			log.WithError(err).Errorf("Parse time error")
+			return nil, err
+		}
+		entities = append(entities, entity)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.WithError(err).Errorf("Error iterating rows: %s", err.Error())
+		return nil, err
+	}
+
+	return entities, nil
+}

@@ -3,10 +3,12 @@ package api
 import (
 	"context"
 	batman "education-website"
+	"education-website/service/user"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/robfig/cron/v3"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/apm/module/apmlogrus"
@@ -155,6 +157,8 @@ func NewRouter(config Config) http.Handler {
 	//internalRouter.HandleFunc("/check-in-class", handleCheckInAttendanceClass).Methods(http.MethodPost)
 	internalRouter.HandleFunc("/add-student", handleInsertOneNewStudent).Methods(http.MethodPost)
 	internalRouter.HandleFunc("/sort-role", handleGetUserByRole).Methods(http.MethodGet)
+	internalRouter.HandleFunc("/delete-course", handleDeleteCourse).Methods(http.MethodDelete)
+	//internalRouter.HandleFunc("/delete-user", handleDeleteUser).Methods(http.MethodDelete)
 
 	// APIs that require token
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()
@@ -165,11 +169,14 @@ func NewRouter(config Config) http.Handler {
 	externalRouter.HandleFunc("/all-courses", handleGetAllCourseInformation).Methods(http.MethodGet)
 	//internalRouter.HandleFunc("/class-information", handleGetClassInformation).Methods(http.MethodGet)
 	externalRouter.HandleFunc("/send-email", handleEmailJobs).Methods(http.MethodPost)
+	externalRouter.HandleFunc("/send-daily-email", handleSendDailyEmail).Methods(http.MethodGet)
+	externalRouter.HandleFunc("/course-sessions", getCourseAllSessions).Methods(http.MethodGet)
+	externalRouter.HandleFunc("/students", getStudentsByCourse).Methods(http.MethodGet)
 
 	// Set up cron job to run sendDailyEmail at 7 AM daily
-	//con := cron.New()
-	//con.AddFunc("0 7 * * *", userService.sendDailyEmail)
-	//con.Start()
+	con := cron.New()
+	con.AddFunc("0 7 * * *", user.SendDailyEmail)
+	con.Start()
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000"},

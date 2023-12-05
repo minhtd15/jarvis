@@ -213,7 +213,7 @@ func (c *classManagementStore) GetClassFromToDateStore(fromDate string, toDate s
 	log.Infof("Get all classes for user %s from %s, to %s", userId, fromDate, toDate)
 	sqlQuery := "SELECT C.COURSE_ID, CO.COURSE_TYPE_ID, C.START_TIME, C.END_TIME, C.DATE " +
 		"FROM CLASS C " +
-		"JOIN CLASS_MANAGER CM ON C.COURSE_ID = CM.COURSE_ID " +
+		"JOIN CLASS_MANAGER CM ON C.CLASS_ID = CM.COURSE_ID " +
 		"JOIN COURSE CO ON C.COURSE_ID = CO.COURSE_ID " +
 		"WHERE CM.USER_ID = ? " +
 		"AND C.DATE >= ? AND C.DATE <= ?"
@@ -222,6 +222,56 @@ func (c *classManagementStore) GetClassFromToDateStore(fromDate string, toDate s
 	err := c.db.SelectContext(ctx, &rs, sqlQuery, userId, fromDate, toDate)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to get class for user %s from the database", userId)
+		return nil, err
+	}
+	return rs, nil
+}
+
+func (c *classManagementStore) DeleteCourseById(courseId string, ctx context.Context) error {
+	log.Infof("Delete course %s store", courseId)
+
+	// Start a transaction
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Errorf("Error starting transaction: %v", err)
+		return err
+	}
+
+	defer tx.Rollback()
+
+	sqlQuery := "DELETE FROM COURSE WHERE COURSE_ID = ?"
+
+	_, err = tx.ExecContext(ctx, sqlQuery, courseId)
+	if err != nil {
+		log.Errorf("Error deleting course: %v", err)
+		return err
+	}
+
+	sqlQuery = "DELETE FROM CLASS WHERE COURSE_ID = ?"
+	_, err = tx.ExecContext(ctx, sqlQuery, courseId)
+	if err != nil {
+		log.Errorf("Error deleting course: %v", err)
+		return err
+	}
+
+	// Commit the transaction if everything is successful
+	if err := tx.Commit(); err != nil {
+		log.Errorf("Error committing transaction: %v", err)
+		return err
+	}
+
+	log.Infof("Course with ID %s deleted successfully", courseId)
+	return nil
+}
+
+func (c *classManagementStore) GetScheduleByCourseIdStore(courseId string, ctx context.Context) ([]string, error) {
+	log.Infof("Get schedule for %s", courseId)
+	sqlQuery := "SELECT DATE FROM CLASS WHERE COURSE_ID = ?"
+
+	var rs []string
+	err := c.db.SelectContext(ctx, &rs, sqlQuery, courseId)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to get schedule of course %s from the database", courseId)
 		return nil, err
 	}
 	return rs, nil
