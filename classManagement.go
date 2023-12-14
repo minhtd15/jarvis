@@ -15,7 +15,6 @@ type ClassService interface {
 	GetCourseType(ctx context.Context) (map[int]string, error)
 	GetFromToSchedule(fromDate string, toDate string, userId string, courseType map[int]string, ctx context.Context) ([]api_response.FromToScheduleResponse, error)
 	DeleteCourseByCourseId(courseId string, ctx context.Context) error
-	GetCourseSessionsService(courseId string, ctx context.Context) ([]string, error)
 }
 
 type ClassStore interface {
@@ -26,5 +25,4 @@ type ClassStore interface {
 	GetAllCourseType(ctx context.Context) ([]course_class.CourseTypeEntity, error)
 	GetClassFromToDateStore(fromDate string, toDate string, userId string, ctx context.Context) ([]course_class.FromToScheduleEntity, error)
 	DeleteCourseById(courseId string, ctx context.Context) error
-	GetScheduleByCourseIdStore(courseId string, ctx context.Context) ([]string, error)
 }

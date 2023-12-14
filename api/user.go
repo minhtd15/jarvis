@@ -600,3 +600,77 @@ func getStudentsByCourse(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
+
+func handlePostStudentAttendance(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD POST", "post student attendance")
+	logger.Infof("this API is used to add student attendance to database")
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	var rq api_request.StudentAttendanceRequest
+	err = json.Unmarshal(bodyBytes, &rq)
+	if err != nil {
+		log.WithError(err).Errorf("Error marshaling body in getting student attendance request")
+		http.Error(w, "Status internal Request", http.StatusInternalServerError)
+		return
+	}
+
+	err = userService.AddStudentAttendanceService(rq, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error service add student attendance")
+		http.Error(w, "Unable to insert student attendance", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful add student attendance to database",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func updateStudentAttendanceStatus(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD PUT", "update student attendance")
+	logger.Infof("this API is used to update student attendance to database")
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	var rq api_request.StudentAttendanceRequest
+	err = json.Unmarshal(bodyBytes, &rq)
+
+	err = userService.UpdateStudentAttendanceService(rq, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error update student attendance request service")
+		http.Error(w, "Error internal Request", http.StatusInternalServerError)
+		return
+	}
+
+	log.Infof("Successful update student %s attendance", rq.StudentId)
+	response := map[string]interface{}{
+		"message": "Successful update students attendance to database",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}

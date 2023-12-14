@@ -44,6 +44,9 @@ type UserService interface {
 	GetCourseExistenceById(courseId string, ctx context.Context) error
 	GetAllUserByJobPosition(jobPos string, ctx context.Context) ([]*UserResponse, error)
 	GetStudentByCourseId(courseId string, ctx context.Context) ([]api_response.StudentResponse, error)
+	AddStudentAttendanceService(rq api_request.StudentAttendanceRequest, ctx context.Context) error
+	GetCourseSessionsService(courseId string, ctx context.Context) ([]api_response.StudentAttendanceScheduleResponse, error)
+	UpdateStudentAttendanceService(rq api_request.StudentAttendanceRequest, ctx context.Context) error
 }
 
 type UserStore interface {
@@ -59,4 +62,7 @@ type UserStore interface {
 	GetUserByJobPosition(jobPos string, ctx context.Context) ([]user.UserEntity, error)
 	GetUserSalaryConfigStore(userId string, ctx context.Context) ([]api_response.SalaryConfig, error)
 	GetStudentByCourseIdStore(courseId string, ctx context.Context) ([]student.EntityStudent, error)
+	AddStudentAttendanceStore(rq student.StudentAttendanceEntity, ctx context.Context) error
+	GetScheduleByCourseIdStore(studentList []student.EntityStudent, courseId string, ctx context.Context) ([]api_response.StudentAttendanceScheduleResponse, error)
+	UpdateStudentAttendanceStore(rq api_request.StudentAttendanceRequest, ctx context.Context) error
 }

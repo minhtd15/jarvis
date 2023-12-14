@@ -12,6 +12,7 @@ import (
 	"education-website/entity/user"
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
+	"strconv"
 	"time"
 )
 
@@ -431,4 +432,137 @@ func (u *userManagementStore) GetStudentByCourseIdStore(courseId string, ctx con
 	}
 
 	return entities, nil
+}
+
+func (u *userManagementStore) AddStudentAttendanceStore(rq student.StudentAttendanceEntity, ctx context.Context) error {
+	log.Infof("POST student attendance store, classId %s", rq.ClassId)
+
+	// Start a new transaction
+	tx, err := u.db.Begin()
+	if err != nil {
+		log.WithError(err).Errorf("Failed to start a transaction")
+		return err
+	}
+	defer func() {
+		// Check if there was an error, if so, rollback the transaction
+		if err != nil {
+			log.WithError(err).Errorf("Rolling back the transaction")
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				log.WithError(rollbackErr).Errorf("Failed to rollback the transaction")
+			}
+		}
+	}()
+
+	sqlQuery := "INSERT INTO STUDENT_ATTENDANCE (STUDENT_ID, CLASS_ID, STATUS) VALUES (?, ?, ?)"
+	stmt, err := tx.Prepare(sqlQuery)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to prepare SQL statement")
+		return err
+	}
+	defer stmt.Close()
+
+	// Execute the prepared statement within the transaction
+	_, err = stmt.Exec(rq.StudentId, rq.ClassId, rq.Status)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to add student attendance into the database")
+		return err
+	}
+
+	// If everything is successful, commit the transaction
+	if err := tx.Commit(); err != nil {
+		log.WithError(err).Errorf("Failed to commit the transaction")
+		return err
+	}
+
+	return nil
+}
+
+func (u *userManagementStore) GetScheduleByCourseIdStore(studentList []student.EntityStudent, courseId string, ctx context.Context) ([]api_response.StudentAttendanceScheduleResponse, error) {
+	log.Infof("Get student schedule for %s", courseId)
+
+	var rs []api_response.StudentAttendanceScheduleResponse
+
+	sqlQuery := "SELECT SA.CLASS_ID, SA.STATUS, C.DATE FROM STUDENT_ATTENDANCE SA JOIN CLASS C ON C.CLASS_ID = SA.CLASS_ID WHERE STUDENT_ID = ? "
+
+	for _, v := range studentList {
+		id, _ := strconv.ParseInt(v.Id, 10, 64)
+		tmp := api_response.StudentAttendanceScheduleResponse{
+			StudentId: id,
+			Name:      v.Name,
+			Dob:       v.DOB.Format("2006-01-02"),
+		}
+
+		rows, err := u.db.QueryContext(ctx, sqlQuery, id)
+		if err != nil {
+			log.Errorf("Error executing SQL query: %v", err)
+			return nil, err
+		}
+		defer rows.Close()
+
+		var entities []api_response.CheckInStudent
+		// Iterate through the result set and scan into UserEntity structs
+		for rows.Next() {
+			var entity api_response.CheckInStudent
+			err := rows.Scan(
+				&entity.ClassId,
+				&entity.Status,
+				&entity.Date,
+			)
+			if err != nil {
+				log.Errorf("Error scanning row: %v", err)
+				return nil, err
+			}
+			entities = append(entities, entity)
+		}
+
+		tmp.CheckIn = entities
+		rs = append(rs, tmp)
+	}
+
+	log.Infof("Successfull get data :%s", rs)
+	return rs, nil
+}
+
+func (u *userManagementStore) UpdateStudentAttendanceStore(rq api_request.StudentAttendanceRequest, ctx context.Context) error {
+	log.Infof("Start to update new student %s attendance", rq.StudentId)
+
+	// Begin a transaction
+	tx, err := u.db.Begin()
+	if err != nil {
+		log.WithError(err).Errorf("Failed to begin transaction")
+		return err
+	}
+
+	defer func() {
+		// Rollback the transaction if there is an error or return is not nil
+		if r := recover(); r != nil || err != nil {
+			log.WithError(err).Errorf("Rolling back transaction")
+			tx.Rollback()
+			return
+		}
+		// Commit the transaction if there is no error
+		err := tx.Commit()
+		if err != nil {
+			log.WithError(err).Errorf("Failed to commit transaction")
+		}
+	}()
+
+	sqlQuery := "UPDATE STUDENT_ATTENDANCE SET STATUS = ? WHERE STUDENT_ID = ? AND CLASS_ID = ?"
+
+	stmt, err := tx.Prepare(sqlQuery)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to prepare SQL statement")
+		return err
+	}
+	defer stmt.Close()
+
+	// Execute the prepared statement within the transaction
+	_, err = stmt.Exec(rq.Status, rq.StudentId, rq.ClassId)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to update user password in the database")
+		return err
+	}
+
+	// Return nil if the update is successful
+	return nil
 }

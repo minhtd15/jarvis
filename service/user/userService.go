@@ -390,3 +390,43 @@ func (u userService) GetStudentByCourseId(courseId string, ctx context.Context) 
 	}
 	return rs, nil
 }
+
+func (u userService) AddStudentAttendanceService(rq api_request.StudentAttendanceRequest, ctx context.Context) error {
+	log.Infof("Service add student request for student %s in classID %s and status is %s", rq.StudentId, rq.ClassId, rq.Status)
+
+	entity := student.StudentAttendanceEntity{
+		StudentId: rq.StudentId,
+		ClassId:   rq.ClassId,
+		Status:    rq.Status,
+	}
+
+	err := u.userStore.AddStudentAttendanceStore(entity, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error service add student attendance in store/database")
+		return err
+	}
+
+	return nil
+}
+
+func (u userService) GetCourseSessionsService(courseId string, ctx context.Context) ([]api_response.StudentAttendanceScheduleResponse, error) {
+	log.Infof("First need to get the student list from course %s", courseId)
+
+	studentList, err := u.userStore.GetStudentByCourseIdStore(courseId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to get student list")
+		return nil, err
+	}
+
+	rs, err := u.userStore.GetScheduleByCourseIdStore(studentList, courseId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to get student attendance along with schedule")
+		return nil, err
+	}
+
+	return rs, nil
+}
+
+func (u userService) UpdateStudentAttendanceService(rq api_request.StudentAttendanceRequest, ctx context.Context) error {
+	return u.userStore.UpdateStudentAttendanceStore(rq, ctx)
+}

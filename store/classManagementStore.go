@@ -263,16 +263,3 @@ func (c *classManagementStore) DeleteCourseById(courseId string, ctx context.Con
 	log.Infof("Course with ID %s deleted successfully", courseId)
 	return nil
 }
-
-func (c *classManagementStore) GetScheduleByCourseIdStore(courseId string, ctx context.Context) ([]string, error) {
-	log.Infof("Get schedule for %s", courseId)
-	sqlQuery := "SELECT DATE FROM CLASS WHERE COURSE_ID = ?"
-
-	var rs []string
-	err := c.db.SelectContext(ctx, &rs, sqlQuery, courseId)
-	if err != nil {
-		log.WithError(err).Errorf("Failed to get schedule of course %s from the database", courseId)
-		return nil, err
-	}
-	return rs, nil
-}

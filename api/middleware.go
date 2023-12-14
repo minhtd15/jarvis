@@ -9,7 +9,7 @@ import (
 func AuthMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if strings.Contains(r.URL.Path, "/e/") {
+			if strings.Contains(r.URL.Path, "/e/") || strings.Contains(r.URL.Path, "/web/") {
 				// url contains "/p/...", do not need token
 				next.ServeHTTP(w, r)
 				return

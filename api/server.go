@@ -172,6 +172,11 @@ func NewRouter(config Config) http.Handler {
 	externalRouter.HandleFunc("/send-daily-email", handleSendDailyEmail).Methods(http.MethodGet)
 	externalRouter.HandleFunc("/course-sessions", getCourseAllSessions).Methods(http.MethodGet)
 	externalRouter.HandleFunc("/students", getStudentsByCourse).Methods(http.MethodGet)
+	externalRouter.HandleFunc("/check-attendance-student", handlePostStudentAttendance).Methods(http.MethodPost)
+	externalRouter.HandleFunc("/fix-attendance-status", updateStudentAttendanceStatus).Methods(http.MethodPut)
+
+	// Serving static files from the "./static" directory
+	r.PathPrefix("/web/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir("/Users/minhtong/Desktop/DevelopingWeb"))))
 
 	// Set up cron job to run sendDailyEmail at 7 AM daily
 	con := cron.New()

@@ -190,18 +190,19 @@ func handleClassFromToDateById(w http.ResponseWriter, r *http.Request) {
 
 func getCourseAllSessions(w http.ResponseWriter, r *http.Request) {
 	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle get course all sessions")
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle get course all sessions, students, ")
 	logger.Infof("Get class all sessions")
 
 	keys := r.URL.Query()
 	courseId := keys.Get("courseId")
 
-	result, err := classService.GetCourseSessionsService(courseId, ctx)
+	result, err := userService.GetCourseSessionsService(courseId, ctx)
 	if err != nil {
 		log.WithError(err).Errorf("Unable to get course sessions service")
 		http.Error(w, "unable to get course session api", http.StatusInternalServerError)
 		return
 	}
+
 	response := map[string]interface{}{
 		"message": "Successful getting schedule information",
 		"data":    result,
