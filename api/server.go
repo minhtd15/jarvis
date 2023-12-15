@@ -159,6 +159,8 @@ func NewRouter(config Config) http.Handler {
 	internalRouter.HandleFunc("/sort-role", handleGetUserByRole).Methods(http.MethodGet)
 	internalRouter.HandleFunc("/delete-course", handleDeleteCourse).Methods(http.MethodDelete)
 	//internalRouter.HandleFunc("/delete-user", handleDeleteUser).Methods(http.MethodDelete)
+	internalRouter.HandleFunc("/delete-class", handleDeleteSessionByClassIs).Methods(http.MethodDelete)
+	internalRouter.HandleFunc("/my-schedule", handleGetMySchedule).Methods(http.MethodGet)
 
 	// APIs that require token
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()

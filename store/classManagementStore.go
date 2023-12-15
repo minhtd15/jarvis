@@ -263,3 +263,30 @@ func (c *classManagementStore) DeleteCourseById(courseId string, ctx context.Con
 	log.Infof("Course with ID %s deleted successfully", courseId)
 	return nil
 }
+
+func (c *classManagementStore) DeleteClassByIdStore(classId string, ctx context.Context) error {
+	log.Infof("Start to delete class %s store", classId)
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Errorf("Error starting transaction: %v", err)
+		return err
+	}
+
+	defer tx.Rollback()
+
+	sqlQuery := "DELETE FROM CLASS WHERE CLASS_ID = ?"
+	_, err = tx.ExecContext(ctx, sqlQuery, classId)
+	if err != nil {
+		log.Errorf("Error deleting class: %v", err)
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Errorf("Error committing transaction: %v", err)
+		return err
+	}
+
+	log.Infof("ClassiD with ID %s deleted successfully", classId)
+	return nil
+}

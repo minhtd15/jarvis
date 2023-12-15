@@ -304,3 +304,7 @@ func (c classService) GetClassInformationByClassId(classId string, ctx context.C
 func (c classService) DeleteCourseByCourseId(courseId string, ctx context.Context) error {
 	return c.classStore.DeleteCourseById(courseId, ctx)
 }
+
+func (c classService) DeleteClassByClassId(rq api_request.DeleteClassInfo, ctx context.Context) error {
+	return c.classStore.DeleteClassByIdStore(rq.ClassId, ctx)
+}

@@ -430,3 +430,30 @@ func (u userService) GetCourseSessionsService(courseId string, ctx context.Conte
 func (u userService) UpdateStudentAttendanceService(rq api_request.StudentAttendanceRequest, ctx context.Context) error {
 	return u.userStore.UpdateStudentAttendanceStore(rq, ctx)
 }
+
+func (u userService) GetAllInChargeCourse(username string, ctx context.Context) ([]api_response.CourseResponse, error) {
+	log.Infof("Start to get course which user %s in charge", username)
+
+	rs, err := u.userStore.GetUserCourseInChargeStore(username, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to get course that user in charge store")
+		return nil, err
+	}
+
+	var result []api_response.CourseResponse
+
+	for _, v := range rs {
+		tmp := api_response.CourseResponse{
+			CourseId:   strconv.Itoa(v.CourseId),
+			CourseName: v.CourseName,
+			Room:       strconv.Itoa(v.Room),
+			StartDate:  v.StartDate.String,
+			EndDate:    v.EndDate.String,
+			StudyDays:  v.StudyDays,
+			Location:   v.Location.String,
+		}
+		result = append(result, tmp)
+	}
+
+	return result, nil
+}

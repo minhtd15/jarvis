@@ -7,6 +7,7 @@ import (
 	api_request "education-website/api/request"
 	api_response "education-website/api/response"
 	"education-website/commonconstant"
+	"education-website/entity/course_class"
 	"education-website/entity/salary"
 	"education-website/entity/student"
 	"education-website/entity/user"
@@ -565,4 +566,49 @@ func (u *userManagementStore) UpdateStudentAttendanceStore(rq api_request.Studen
 
 	// Return nil if the update is successful
 	return nil
+}
+
+func (u *userManagementStore) GetUserCourseInChargeStore(username string, ctx context.Context) ([]course_class.CourseEntity, error) {
+	log.Infof("Start to get user courses in charge store", username)
+	var entities []course_class.CourseEntity
+	sqlQuery := "SELECT C.*, CONCAT(CT.CODE, C.COURSE_ID) AS COURSE_NAME FROM COURSE C JOIN COURSE_TYPE CT ON C.COURSE_TYPE_ID = CT.COURSE_TYPE_ID WHERE C.MAIN_TEACHER = ?"
+
+	// Execute the SQL query
+	rows, err := u.db.QueryContext(ctx, sqlQuery, username)
+	if err != nil {
+		log.Errorf("Error executing SQL query: %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Iterate through the result set and scan into UserEntity structs
+	for rows.Next() {
+		var entity course_class.CourseEntity
+		err := rows.Scan(
+			&entity.CourseId,
+			&entity.CourseTypeId,
+			&entity.MainTeacher,
+			&entity.Room,
+			&entity.StartDate,
+			&entity.EndDate,
+			&entity.StartTime,
+			&entity.EndTime,
+			&entity.StudyDays,
+			&entity.Location,
+			&entity.CourseName,
+		)
+		if err != nil {
+			log.Errorf("Error scanning row: %v", err)
+			return nil, err
+		}
+		entities = append(entities, entity)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Errorf("Error iterating through result set: %v", err)
+		return nil, err
+	}
+
+	log.Infof("Successfully get all course that user %s in charge", username)
+	return entities, nil
 }

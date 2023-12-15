@@ -212,3 +212,31 @@ func getCourseAllSessions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
+
+func handleGetMySchedule(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle user every class that this person in charge")
+	logger.Infof("Get course in charge")
+
+	username, ok := r.Context().Value("username").(string)
+	if !ok {
+		http.Error(w, "Unable to get userId from token", http.StatusUnauthorized)
+		return
+	}
+
+	result, err := userService.GetAllInChargeCourse(username, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to get course in charge service")
+		http.Error(w, "unable to get course that this person in charge api", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful getting user course in charge",
+		"data":    result,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}

@@ -674,3 +674,58 @@ func updateStudentAttendanceStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
+
+func handleDeleteSessionByClassIs(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD DElETE", "Delete session by classId")
+	logger.Infof("this API is used to delete class via classId")
+
+	role, ok := r.Context().Value("role").(string)
+	if !ok {
+		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
+		return
+	}
+
+	if role == "user" {
+		response := map[string]interface{}{
+			"message": "You are not allowed to this function",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	var rq api_request.DeleteClassInfo
+	err = json.Unmarshal(bodyBytes, &rq)
+	if err != nil {
+		log.WithError(err).Errorf("Error marshal request to delete class")
+		http.Error(w, "Error internal Request", http.StatusInternalServerError)
+		return
+	}
+
+	err = classService.DeleteClassByClassId(rq, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error delete class service")
+		http.Error(w, "Error internal Request", http.StatusInternalServerError)
+		return
+	}
+
+	log.Infof("Successful delete class %s", rq.ClassId)
+	response := map[string]interface{}{
+		"message": "Successful delete class via classId",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}

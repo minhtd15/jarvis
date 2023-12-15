@@ -4,6 +4,7 @@ import (
 	"context"
 	api_request "education-website/api/request"
 	api_response "education-website/api/response"
+	"education-website/entity/course_class"
 	"education-website/entity/salary"
 	"education-website/entity/student"
 	"education-website/entity/user"
@@ -47,6 +48,7 @@ type UserService interface {
 	AddStudentAttendanceService(rq api_request.StudentAttendanceRequest, ctx context.Context) error
 	GetCourseSessionsService(courseId string, ctx context.Context) ([]api_response.StudentAttendanceScheduleResponse, error)
 	UpdateStudentAttendanceService(rq api_request.StudentAttendanceRequest, ctx context.Context) error
+	GetAllInChargeCourse(username string, ctx context.Context) ([]api_response.CourseResponse, error)
 }
 
 type UserStore interface {
@@ -65,4 +67,5 @@ type UserStore interface {
 	AddStudentAttendanceStore(rq student.StudentAttendanceEntity, ctx context.Context) error
 	GetScheduleByCourseIdStore(studentList []student.EntityStudent, courseId string, ctx context.Context) ([]api_response.StudentAttendanceScheduleResponse, error)
 	UpdateStudentAttendanceStore(rq api_request.StudentAttendanceRequest, ctx context.Context) error
+	GetUserCourseInChargeStore(username string, ctx context.Context) ([]course_class.CourseEntity, error)
 }
