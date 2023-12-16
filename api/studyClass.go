@@ -188,9 +188,9 @@ func handleClassFromToDateById(w http.ResponseWriter, r *http.Request) {
 //	w.WriteHeader(http.StatusOK)
 //}
 
-func getCourseAllSessions(w http.ResponseWriter, r *http.Request) {
+func checkInStudentAttendance(w http.ResponseWriter, r *http.Request) {
 	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle get course all sessions, students, ")
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle get student attendance by course Id ")
 	logger.Infof("Get class all sessions")
 
 	keys := r.URL.Query()
@@ -234,6 +234,32 @@ func handleGetMySchedule(w http.ResponseWriter, r *http.Request) {
 	response := map[string]interface{}{
 		"message": "Successful getting user course in charge",
 		"data":    result,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func handleGetAllSessionsByCourseId(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle get course all sessions, students, ")
+	logger.Infof("Get class all sessions")
+
+	keys := r.URL.Query()
+	courseId := keys.Get("courseId")
+
+	rs, err := classService.GetAllSessionsByCourseIdService(courseId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to get sessions by course Id Service")
+		http.Error(w, "Unable to get sessions by course Id", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message":   "Successful getting sessions for course",
+		"course_id": courseId,
+		"data":      rs,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

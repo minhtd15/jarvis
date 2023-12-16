@@ -15,3 +15,13 @@ type CourseInfoResponse struct {
 	CourseStatus  string    `json:"course_status"`
 	TotalSessions int64     `json:"total_sessions"`
 }
+
+type ClassResponse struct {
+	ClassId   string `json:"class_id"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+	Date      string `json:"date"`
+	Room      string `json:"room"`
+	TypeClass string `json:"type_class"`
+	Note      string `json:"note"`
+}

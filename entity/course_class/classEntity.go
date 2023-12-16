@@ -1,9 +1,16 @@
 package course_class
 
-import "time"
+import (
+	"database/sql"
+)
 
 type ClassEntity struct {
-	ClassId   string    `db:"CLASS_ID"`
-	StartTime time.Time `db:"START_TIME"`
-	EndTime   time.Time `db:"END_TIME"`
+	CourseId  string         `db:"COURSE_ID"`
+	ClassId   string         `db:"CLASS_ID"`
+	StartTime string         `db:"START_TIME"`
+	EndTime   string         `db:"END_TIME"`
+	Date      sql.NullString `db:"DATE"`
+	Room      string         `db:"ROOM"`
+	TypeClass string         `db:"TYPE_CLASS"`
+	Note      sql.NullString `db:"NOTE"`
 }

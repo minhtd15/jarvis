@@ -308,3 +308,29 @@ func (c classService) DeleteCourseByCourseId(courseId string, ctx context.Contex
 func (c classService) DeleteClassByClassId(rq api_request.DeleteClassInfo, ctx context.Context) error {
 	return c.classStore.DeleteClassByIdStore(rq.ClassId, ctx)
 }
+
+func (c classService) GetAllSessionsByCourseIdService(courseId string, ctx context.Context) ([]api_response.ClassResponse, error) {
+	log.Infof("Start service get sessions for course: %s", courseId)
+
+	rs, err := c.classStore.GetAllSessionsByCourseIdStore(courseId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error getting sessions store for course %s", courseId)
+		return nil, err
+	}
+
+	var result []api_response.ClassResponse
+	for _, v := range rs {
+		tmp := api_response.ClassResponse{
+			ClassId:   v.ClassId,
+			StartTime: v.StartTime,
+			EndTime:   v.EndTime,
+			Date:      v.Date.String,
+			Room:      v.Room,
+			TypeClass: v.TypeClass,
+			Note:      v.Note.String,
+		}
+
+		result = append(result, tmp)
+	}
+	return result, nil
+}

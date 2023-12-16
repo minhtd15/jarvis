@@ -290,3 +290,16 @@ func (c *classManagementStore) DeleteClassByIdStore(classId string, ctx context.
 	log.Infof("ClassiD with ID %s deleted successfully", classId)
 	return nil
 }
+
+func (c *classManagementStore) GetAllSessionsByCourseIdStore(courseId string, ctx context.Context) ([]course_class.ClassEntity, error) {
+	log.Infof("Get all sessions for course %s", courseId)
+	sqlQuery := "SELECT * FROM CLASS WHERE COURSE_ID = ?"
+
+	var rs []course_class.ClassEntity
+	err := c.db.SelectContext(ctx, &rs, sqlQuery, courseId)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to get sessions for course %s from the database", courseId)
+		return nil, err
+	}
+	return rs, nil
+}

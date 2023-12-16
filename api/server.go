@@ -172,10 +172,11 @@ func NewRouter(config Config) http.Handler {
 	//internalRouter.HandleFunc("/class-information", handleGetClassInformation).Methods(http.MethodGet)
 	externalRouter.HandleFunc("/send-email", handleEmailJobs).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/send-daily-email", handleSendDailyEmail).Methods(http.MethodGet)
-	externalRouter.HandleFunc("/course-sessions", getCourseAllSessions).Methods(http.MethodGet)
+	externalRouter.HandleFunc("/student-check-in", checkInStudentAttendance).Methods(http.MethodGet)
 	externalRouter.HandleFunc("/students", getStudentsByCourse).Methods(http.MethodGet)
 	externalRouter.HandleFunc("/check-attendance-student", handlePostStudentAttendance).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/fix-attendance-status", updateStudentAttendanceStatus).Methods(http.MethodPut)
+	externalRouter.HandleFunc("/course-sessions", handleGetAllSessionsByCourseId).Methods(http.MethodGet)
 
 	// Serving static files from the "./static" directory
 	r.PathPrefix("/web/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir("/Users/minhtong/Desktop/DevelopingWeb"))))
