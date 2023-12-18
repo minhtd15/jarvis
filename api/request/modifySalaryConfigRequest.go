@@ -7,6 +7,6 @@ type ModifySalaryConfRequest struct {
 
 type SalaryConfiguration struct {
 	PayrollId     int     `json:"payroll_id"`
-	TypePayroll   string  `json:"type_payroll"`
-	PayrollAmount float64 `json:"payroll_amount"`
+	TypePayroll   string  `json:"course_type"`
+	PayrollAmount float64 `json:"payroll_rate"`
 }

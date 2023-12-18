@@ -2,12 +2,15 @@ package api
 
 import (
 	api_request "education-website/api/request"
+	api_response "education-website/api/response"
+	"education-website/entity/user"
 	"encoding/json"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/apm"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 func handlerRegisterUser(w http.ResponseWriter, r *http.Request) {
@@ -55,16 +58,41 @@ func handlerRegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = userService.InsertNewUser(registerRequest, ctx)
+	userId, err := userService.InsertNewUser(registerRequest, ctx)
 	if err != nil {
 		log.WithError(err).Errorf("Error insert new user")
 		http.Error(w, "Status internal request", http.StatusInternalServerError)
 		return
 	}
 
+	generatedToken := jwtService.GenerateToken(user.UserEntity{
+		UserId:   userId,
+		UserName: registerRequest.UserName,
+		FullName: registerRequest.FullName,
+		Role:     "user",
+	})
+
+	userInfoWithToken := map[string]interface{}{
+		"user": api_response.UserDto{
+			UserId:       userId,
+			UserName:     registerRequest.UserName,
+			Email:        registerRequest.Email,
+			Role:         "user",
+			DOB:          registerRequest.DOB,
+			JobPosition:  "Undefined",
+			StartingDate: time.Now().Format("2006-01-02"),
+		},
+		"token": generatedToken,
+	}
+
+	response := map[string]interface{}{
+		"message": "Đăng nhập thành công",
+		"data":    userInfoWithToken,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode("Create new user successful")
+	json.NewEncoder(w).Encode(response)
 }
 
 func handleChangePassword(w http.ResponseWriter, r *http.Request) {

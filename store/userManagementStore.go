@@ -53,8 +53,26 @@ func (u *userManagementStore) GetByUserNameStore(userName string, email string, 
 func (u *userManagementStore) InsertNewUserStore(newUser user.UserEntity, ctx context.Context) error {
 	log.Infof("insert new user to database after validated register information")
 
+	// Start a new transaction
+	tx, err := u.db.Begin()
+	if err != nil {
+		log.WithError(err).Errorf("Failed to begin transaction")
+		return err
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			// Something went wrong, rollback the transaction
+			tx.Rollback()
+			panic(p) // Re-throw the panic after rollback
+		} else if err != nil {
+			// Error occurred, rollback the transaction
+			tx.Rollback()
+		}
+	}()
+
 	sqlQuery := "INSERT INTO USER VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	stmt, err := u.db.Prepare(sqlQuery)
+	stmt, err := tx.Prepare(sqlQuery)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to prepare SQL statement")
 		return err
@@ -62,11 +80,26 @@ func (u *userManagementStore) InsertNewUserStore(newUser user.UserEntity, ctx co
 	defer stmt.Close()
 
 	// Execute the prepared statement
-	_, err = stmt.Exec(newUser.UserId, newUser.UserName, newUser.Email, newUser.Role, newUser.DOB, newUser.StartingDate, newUser.JobPosition, newUser.Password, newUser.FullName, newUser.Gender)
+	result, err := stmt.Exec(newUser.UserId, newUser.UserName, newUser.Email, newUser.Role, newUser.DOB, newUser.StartingDate, newUser.JobPosition, newUser.Password, newUser.FullName, newUser.Gender)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to insert user into the database")
 		return err
 	}
+
+	// Get the last insert ID
+	_, err = result.LastInsertId()
+	if err != nil {
+		log.WithError(err).Errorf("Failed to get last insert ID")
+		return err
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		log.WithError(err).Errorf("Failed to commit transaction")
+		return err
+	}
+
 	return nil
 }
 
@@ -248,7 +281,7 @@ func (u *userManagementStore) ModifyUserInformationStore(rq api_request.ModifyUs
 	return nil
 }
 
-func (u *userManagementStore) InsertOneStudentStore(rq api_request.NewStudentRequest, ctx context.Context) error {
+func (u *userManagementStore) InsertOneStudentStore(rq api_request.NewStudentRequest, courseId string, ctx context.Context) error {
 	log.Infof("Insert one student to database")
 
 	dob, err := time.Parse("2006-01-02", rq.DOB)
@@ -282,19 +315,43 @@ func (u *userManagementStore) InsertOneStudentStore(rq api_request.NewStudentReq
 		}
 	}()
 
-	// Insert into COURSE table
-	sqlClass := "INSERT INTO STUDENT (STUDENT_NAME, DOB, EMAIL, PHONE_NUMBER) VALUES (?, ?, ?, ?)"
-	stmt, err := tx.Prepare(sqlClass)
+	// Insert into STUDENT table
+	sqlStudent := "INSERT INTO STUDENT (STUDENT_NAME, DOB, EMAIL, PHONE_NUMBER) VALUES (?, ?, ?, ?)"
+	stmtStudent, err := tx.Prepare(sqlStudent)
 	if err != nil {
-		log.WithError(err).Errorf("Failed to prepare SQL statement for CLASS")
+		log.WithError(err).Errorf("Failed to prepare SQL statement for STUDENT")
 		return err
 	}
-	defer stmt.Close()
-	_, err = stmt.Exec(tmp.Name, tmp.DOB, tmp.Email, tmp.PhoneNo)
+	defer stmtStudent.Close()
+
+	result, err := stmtStudent.Exec(tmp.Name, tmp.DOB, tmp.Email, tmp.PhoneNo)
 	if err != nil {
-		log.WithError(err).Errorf("Failed to insert class into the database")
+		log.WithError(err).Errorf("Failed to insert student into the database")
 		return err
 	}
+
+	// Get the last insert ID
+	lastInsertID, err := result.LastInsertId()
+	if err != nil {
+		log.WithError(err).Errorf("Failed to get last insert ID")
+		return err
+	}
+
+	// Add another SQL query
+	// For example, insert into ANOTHER_TABLE
+	sqlAnotherTable := "INSERT INTO COURSE_MANAGER (STUDENT_ID, COURSE_ID) VALUES (?, ?)"
+	stmtAnotherTable, err := tx.Prepare(sqlAnotherTable)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to prepare SQL statement for ANOTHER_TABLE")
+		return err
+	}
+	defer stmtAnotherTable.Close()
+	_, err = stmtAnotherTable.Exec(lastInsertID, courseId) // Replace with actual values
+	if err != nil {
+		log.WithError(err).Errorf("Failed to insert data into ANOTHER_TABLE")
+		return err
+	}
+
 	return nil
 }
 

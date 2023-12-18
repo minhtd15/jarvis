@@ -59,13 +59,13 @@ func (u userService) GetUserNamePassword(userLoginInfo api_request.LoginRequest,
 	return &rs, nil
 }
 
-func (u userService) InsertNewUser(userRegisterInfo api_request.RegisterRequest, ctx context.Context) error {
+func (u userService) InsertNewUser(userRegisterInfo api_request.RegisterRequest, ctx context.Context) (string, error) {
 	log.Infof("insert new user to database when user register for a new account")
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userRegisterInfo.Password), 12)
 	if err != nil {
 		log.WithError(err).Errorf("Error encrypt password")
-		return err
+		return "0", err
 	}
 	newUser := user.UserEntity{
 		UserId:       u.GenerateUserId(),
@@ -83,10 +83,10 @@ func (u userService) InsertNewUser(userRegisterInfo api_request.RegisterRequest,
 	err = u.userStore.InsertNewUserStore(newUser, ctx)
 	if err != nil {
 		log.WithError(err).Errorf("Error insert new user to DB")
-		return err
+		return "0", nil
 	}
 
-	return nil
+	return newUser.UserId, nil
 }
 
 func (u userService) GenerateUserId() string {
@@ -295,8 +295,8 @@ func (u userService) ModifyUserService(rq api_request.ModifyUserInformationReque
 	return u.userStore.ModifyUserInformationStore(rq, userId, ctx)
 }
 
-func (u userService) InsertOneStudentService(request api_request.NewStudentRequest, ctx context.Context) error {
-	return u.userStore.InsertOneStudentStore(request, ctx)
+func (u userService) InsertOneStudentService(request api_request.NewStudentRequest, courseId string, ctx context.Context) error {
+	return u.userStore.InsertOneStudentStore(request, courseId, ctx)
 }
 
 func SendDailyEmail() {

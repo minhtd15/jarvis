@@ -35,13 +35,13 @@ type UserResponse struct {
 type UserService interface {
 	GetByUserName(userName string, email string, userId string, ctx context.Context) (*UserResponse, error)
 	GetUserNamePassword(userLoginInfo api_request.LoginRequest, ctx context.Context) (*UserResponse, error)
-	InsertNewUser(userRegisterInfo api_request.RegisterRequest, ctx context.Context) error
+	InsertNewUser(userRegisterInfo api_request.RegisterRequest, ctx context.Context) (string, error)
 	ChangePassword(changePasswordRequest api_request.ChangePasswordRequest, userName string, ctx context.Context) error
 	GetSalaryInformation(userName string, month string, year string, ctx context.Context) ([]*api_response.SalaryAPIResponse, error)
 	ModifySalaryConfiguration(userSalaryInfo api_request.ModifySalaryConfRequest, ctx context.Context) error
 	ImportStudentsByExcel(file multipart.File, courseId string, ctx context.Context) error
 	ModifyUserService(rq api_request.ModifyUserInformationRequest, userId string, ctx context.Context) error
-	InsertOneStudentService(request api_request.NewStudentRequest, ctx context.Context) error
+	InsertOneStudentService(request api_request.NewStudentRequest, courseId string, ctx context.Context) error
 	GetCourseExistenceById(courseId string, ctx context.Context) error
 	GetAllUserByJobPosition(jobPos string, ctx context.Context) ([]*UserResponse, error)
 	GetStudentByCourseId(courseId string, ctx context.Context) ([]api_response.StudentResponse, error)
@@ -53,13 +53,13 @@ type UserService interface {
 
 type UserStore interface {
 	GetByUserNameStore(userName string, email string, userId string, ctx context.Context) (UserResponse, error)
-	InsertNewUserStore(userRegisterInfo user.UserEntity, ctx context.Context) error
+	InsertNewUserStore(newUser user.UserEntity, ctx context.Context) error
 	UpdateNewPassword(newPassword []byte, userName string) error
 	GetSalaryReportStore(userName string, month string, year string, ctx context.Context) ([]salary.SalaryEntity, error)
 	ModifySalaryConfigurationStore(userId string, userSalaryInfo []api_request.SalaryConfiguration, ctx context.Context) error
 	InsertStudentStore(data []student.EntityStudent, courseId string, ctx context.Context) error
 	ModifyUserInformationStore(rq api_request.ModifyUserInformationRequest, userId string, ctx context.Context) error
-	InsertOneStudentStore(rq api_request.NewStudentRequest, ctx context.Context) error
+	InsertOneStudentStore(rq api_request.NewStudentRequest, courseId string, ctx context.Context) error
 	CheckCourseExistence(courseId string, ctx context.Context) error
 	GetUserByJobPosition(jobPos string, ctx context.Context) ([]user.UserEntity, error)
 	GetUserSalaryConfigStore(userId string, ctx context.Context) ([]api_response.SalaryConfig, error)

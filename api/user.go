@@ -387,7 +387,7 @@ func handleInsertOneNewStudent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = userService.InsertOneStudentService(rq, ctx)
+	err = userService.InsertOneStudentService(rq, courseId, ctx)
 	if err != nil {
 		log.WithError(err).Errorf("Error insert student %s", rq.Name)
 		http.Error(w, "Unable to insert one new student", http.StatusInternalServerError)
