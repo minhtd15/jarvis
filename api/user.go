@@ -238,6 +238,7 @@ func handleInsertStudents(w http.ResponseWriter, r *http.Request) {
 
 	err := r.ParseMultipartForm(10 << 20) // 10 MB limit for the uploaded file
 	if err != nil {
+		log.WithError(err).Errorf("ERROR IN UPLOAD FILE: %s", err)
 		http.Error(w, "Unable to parse uploaded file", http.StatusBadRequest)
 		return
 	}
@@ -722,6 +723,70 @@ func handleDeleteSessionByClassIs(w http.ResponseWriter, r *http.Request) {
 	log.Infof("Successful delete class %s", rq.ClassId)
 	response := map[string]interface{}{
 		"message": "Successful delete class via classId",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func handleCheckInAttendanceClass(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD POST", "Check in worker's attendance to calculate salary")
+	logger.Infof("this API is used to delete class via classId")
+
+	userName, ok := r.Context().Value("username").(string)
+	userId, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
+		return
+	}
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	var rq api_request.CheckInAttendanceWorkerRequest
+	err = json.Unmarshal(bodyBytes, &rq)
+	if err != nil {
+		log.WithError(err).Warningf("Error marshalling body from request update attendance worker")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	classInfoRequest := api_request.CourseInfoRequest{
+		CourseId: rq.CourseId,
+	}
+
+	// check if the username is in charge the right class
+	personInCharge, err := classService.GetCourseInformationByClassName(classInfoRequest, ctx)
+	if err != nil {
+		log.WithError(err).Warningf("Error get course to check person in charge to update attendance worker")
+		http.Error(w, "Error internal", 252001)
+		return
+	}
+
+	if userName != personInCharge.MainTeacher {
+		log.WithError(err).Warningf("wrong user to change the class attendance")
+		http.Error(w, "You are not allowed to change other's attendance", http.StatusForbidden)
+		return
+	}
+
+	err = userService.CheckInWorkerAttendanceService(rq, userId, ctx)
+	if err != nil {
+		log.WithError(err).Warningf("Error check in attendance course to update attendance worker")
+		http.Error(w, "Error internal", 252001)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful update worker attendance to database",
 	}
 
 	w.Header().Set("Content-Type", "application/json")

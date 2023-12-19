@@ -49,6 +49,7 @@ type UserService interface {
 	GetCourseSessionsService(courseId string, ctx context.Context) ([]api_response.StudentAttendanceScheduleResponse, error)
 	UpdateStudentAttendanceService(rq api_request.StudentAttendanceRequest, ctx context.Context) error
 	GetAllInChargeCourse(username string, ctx context.Context) ([]api_response.CourseResponse, error)
+	CheckInWorkerAttendanceService(rq api_request.CheckInAttendanceWorkerRequest, userId string, ctx context.Context) error
 }
 
 type UserStore interface {
@@ -68,4 +69,5 @@ type UserStore interface {
 	GetScheduleByCourseIdStore(studentList []student.EntityStudent, courseId string, ctx context.Context) ([]api_response.StudentAttendanceScheduleResponse, error)
 	UpdateStudentAttendanceStore(rq api_request.StudentAttendanceRequest, ctx context.Context) error
 	GetUserCourseInChargeStore(username string, ctx context.Context) ([]course_class.CourseEntity, error)
+	CheckInWorkerAttendanceStore(rq api_request.CheckInAttendanceWorkerRequest, userId string, ctx context.Context) error
 }

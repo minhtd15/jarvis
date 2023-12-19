@@ -669,3 +669,37 @@ func (u *userManagementStore) GetUserCourseInChargeStore(username string, ctx co
 	log.Infof("Successfully get all course that user %s in charge", username)
 	return entities, nil
 }
+
+func (u *userManagementStore) CheckInWorkerAttendanceStore(rq api_request.CheckInAttendanceWorkerRequest, userId string, ctx context.Context) error {
+	log.Infof("Check in attendance for user %v", rq)
+
+	// Begin a transaction
+	tx, err := u.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.WithError(err).Errorf("Error starting transaction for CHECK IN ATTENDANCE %s", rq)
+		return err
+	}
+
+	currentTime := time.Now()
+	// UPDATE IN COURSE TABLE
+	sqlQuery := "INSERT INTO ATTENDANCE_HISTORY (USER_ID, CLASS_NAME, COURSE_TYPE, CHECKIN_TIME, STATUS) VALUES (?, ?, ?, ?, ?)"
+
+	_, err = tx.ExecContext(ctx, sqlQuery, userId, rq.CourseName, rq.CourseTypeId, currentTime, "DONE")
+	if err != nil {
+		// Rollback the transaction if an error occurs
+		tx.Rollback()
+		log.WithError(err).Errorf("Error starting transaction for CHECK IN ATTENDANCE %s", rq)
+		return err
+	}
+
+	// Commit the transaction if everything is successful
+	err = tx.Commit()
+	if err != nil {
+		// Handle commit error if needed
+		log.WithError(err).Errorf("Error committing transaction for CHECK IN ATTENDANCE")
+		return err
+	}
+
+	log.Infof("Successful CHECK IN ATTENDANCE store")
+	return nil
+}

@@ -266,3 +266,94 @@ func handleGetAllSessionsByCourseId(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
+
+func handleFixCourseInformation(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD PUT", "fix course information")
+	logger.Infof("this API is used to modify course information")
+
+	role, ok := r.Context().Value("role").(string)
+	if !ok {
+		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
+		return
+	}
+	if role == "user" {
+		response := map[string]interface{}{
+			"message": "You are not allowed to access to this function",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(response)
+	}
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	var rq api_request.ModifyCourseInformation
+	err = json.Unmarshal(bodyBytes, &rq)
+	if err != nil {
+		log.WithError(err).Errorf("Error marshal request to fix course information")
+		http.Error(w, "Error marshal request to fix course information", http.StatusInternalServerError)
+		return
+	}
+
+	err = classService.FixCourseInformationService(rq, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error in service modify course information")
+		http.Error(w, "Error in service modify course information", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful fix course information",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func AddNoteByClassId(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD POST", "add note to class by classId")
+	logger.Infof("this API is used to add note to class by classId")
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	var noteRequest api_request.AddNoteRequest
+	err = json.Unmarshal(bodyBytes, &noteRequest)
+	if err != nil {
+		log.WithError(err).Warningf("Error when unmarshaling data from request")
+		http.Error(w, "Status bad Request", http.StatusInternalServerError)
+		return
+	}
+
+	err = classService.AddNoteService(noteRequest, ctx)
+	if err != nil {
+		log.WithError(err).Warningf("Error service add note")
+		http.Error(w, "Error service add note", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful getting add note to class by classId",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}

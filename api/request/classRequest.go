@@ -18,3 +18,14 @@ type CourseInfoRequest struct {
 type DeleteClassInfo struct {
 	ClassId string `json:"class_id"`
 }
+
+type ModifyCourseInformation struct {
+	CourseId int    `json:"course_id"`
+	Teacher  string `json:"teacher"`
+	Room     int    `json:"room"`
+}
+
+type AddNoteRequest struct {
+	ClassId string `json:"class_id"`
+	Note    string `json:"note"`
+}

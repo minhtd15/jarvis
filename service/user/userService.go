@@ -459,3 +459,8 @@ func (u userService) GetAllInChargeCourse(username string, ctx context.Context) 
 
 	return result, nil
 }
+
+func (u userService) CheckInWorkerAttendanceService(rq api_request.CheckInAttendanceWorkerRequest, userId string, ctx context.Context) error {
+	log.Infof("Start to get count attendance service for worker %v", rq)
+	return u.userStore.CheckInWorkerAttendanceStore(rq, userId, ctx)
+}

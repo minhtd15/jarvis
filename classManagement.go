@@ -17,6 +17,8 @@ type ClassService interface {
 	DeleteCourseByCourseId(courseId string, ctx context.Context) error
 	DeleteClassByClassId(rq api_request.DeleteClassInfo, ctx context.Context) error
 	GetAllSessionsByCourseIdService(courseId string, ctx context.Context) ([]api_response.ClassResponse, error)
+	FixCourseInformationService(rq api_request.ModifyCourseInformation, ctx context.Context) error
+	AddNoteService(noteRequest api_request.AddNoteRequest, ctx context.Context) error
 }
 
 type ClassStore interface {
@@ -29,4 +31,6 @@ type ClassStore interface {
 	DeleteCourseById(courseId string, ctx context.Context) error
 	DeleteClassByIdStore(classId string, ctx context.Context) error
 	GetAllSessionsByCourseIdStore(courseId string, ctx context.Context) ([]course_class.ClassEntity, error)
+	FixCourseInformationStore(rq api_request.ModifyCourseInformation, ctx context.Context) error
+	AddNoteStore(noteRequest api_request.AddNoteRequest, ctx context.Context) error
 }

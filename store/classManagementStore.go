@@ -303,3 +303,79 @@ func (c *classManagementStore) GetAllSessionsByCourseIdStore(courseId string, ct
 	}
 	return rs, nil
 }
+
+func (c *classManagementStore) FixCourseInformationStore(rq api_request.ModifyCourseInformation, ctx context.Context) error {
+	log.Infof("Fix course information %v", rq)
+
+	// Begin a transaction
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.WithError(err).Errorf("Error starting transaction for fix course information %s", rq.CourseId)
+		return err
+	}
+
+	// UPDATE IN COURSE TABLE
+	sqlQuery := "UPDATE COURSE SET MAIN_TEACHER = ?, ROOM = ? WHERE COURSE_ID = ?"
+
+	_, err = tx.ExecContext(ctx, sqlQuery, rq.Teacher, rq.Room, rq.CourseId)
+	if err != nil {
+		// Rollback the transaction if an error occurs
+		tx.Rollback()
+		log.WithError(err).Errorf("Error fix course %s information on TABLE COURSE", rq.CourseId)
+		return err
+	}
+
+	// UPDATE IN CLASS TABLE
+	sqlQuery = "UPDATE CLASS SET ROOM = ? WHERE COURSE_ID = ?"
+	_, err = tx.ExecContext(ctx, sqlQuery, rq.Room, rq.CourseId)
+	if err != nil {
+		// Rollback the transaction if an error occurs
+		tx.Rollback()
+		log.WithError(err).Errorf("Error fix course %s information on TABLE CLASS", rq.CourseId)
+		return err
+	}
+
+	// Commit the transaction if everything is successful
+	err = tx.Commit()
+	if err != nil {
+		// Handle commit error if needed
+		log.WithError(err).Errorf("Error committing transaction for course information update")
+		return err
+	}
+
+	log.Infof("Successful update course information")
+	return nil
+
+}
+
+func (c *classManagementStore) AddNoteStore(noteRequest api_request.AddNoteRequest, ctx context.Context) error {
+	log.Infof("Start add note store for class %s", noteRequest.ClassId)
+	// Begin a transaction
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.WithError(err).Errorf("Error starting transaction for note class information %s", noteRequest)
+		return err
+	}
+
+	// UPDATE IN COURSE TABLE
+	sqlQuery := "UPDATE CLASS SET NOTE = ? WHERE CLASS_ID = ?"
+
+	_, err = tx.ExecContext(ctx, sqlQuery, noteRequest.Note, noteRequest.ClassId)
+	if err != nil {
+		// Rollback the transaction if an error occurs
+		tx.Rollback()
+		log.WithError(err).Errorf("Error starting transaction for note class information %s", noteRequest)
+		return err
+	}
+	// Commit the transaction if everything is successful
+	err = tx.Commit()
+	if err != nil {
+		// Handle commit error if needed
+		log.WithError(err).Errorf("Error committing transaction for note class information")
+		return err
+	}
+
+	log.Infof("Successful update note class information")
+	return nil
+
+}

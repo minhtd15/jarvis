@@ -334,3 +334,11 @@ func (c classService) GetAllSessionsByCourseIdService(courseId string, ctx conte
 	}
 	return result, nil
 }
+
+func (c classService) FixCourseInformationService(rq api_request.ModifyCourseInformation, ctx context.Context) error {
+	return c.classStore.FixCourseInformationStore(rq, ctx)
+}
+
+func (c classService) AddNoteService(noteRequest api_request.AddNoteRequest, ctx context.Context) error {
+	return c.classStore.AddNoteStore(noteRequest, ctx)
+}
