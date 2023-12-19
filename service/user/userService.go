@@ -384,6 +384,8 @@ func (u userService) GetStudentByCourseId(courseId string, ctx context.Context) 
 		tmp := api_response.StudentResponse{
 			StudentId:   v.Id,
 			StudentName: v.Name,
+			Email:       v.Email,
+			PhoneNumber: v.PhoneNo,
 			Dob:         v.DOB,
 		}
 		rs = append(rs, tmp)

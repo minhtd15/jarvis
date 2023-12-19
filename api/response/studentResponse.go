@@ -5,6 +5,8 @@ import "time"
 type StudentResponse struct {
 	StudentId   string    `json:"student_id"`
 	StudentName string    `json:"student_name"`
+	Email       string    `json:"email"`
+	PhoneNumber string    `json:"phone_number"`
 	Dob         time.Time `json:"dob"`
 }
 
