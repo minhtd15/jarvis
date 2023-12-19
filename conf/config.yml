@@ -20,3 +20,9 @@ database:
 #  user: root
 #  pass: tongminh1510
 #  dbName: EDUDBTEST
+
+#  host: 10.96.210.203
+#  port: 3306
+#  user: fall2324w20g6
+#  pass: qwertyuiop
+#  dbName: fall2324w20g6_tmp

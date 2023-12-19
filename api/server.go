@@ -144,7 +144,7 @@ func NewRouter(config Config) http.Handler {
 	r := mux.NewRouter()
 	r.Use(AuthMiddleware())
 
-	// APIs that do not require token
+	// APIs that require token
 	internalRouter := r.PathPrefix("/i/v1").Subrouter()
 	internalRouter.HandleFunc("/user-verification", handlerUserAccount).Methods(http.MethodPost)
 	internalRouter.HandleFunc("/change-password", handleChangePassword).Methods(http.MethodPut)
@@ -162,7 +162,7 @@ func NewRouter(config Config) http.Handler {
 	internalRouter.HandleFunc("/delete-class", handleDeleteSessionByClassIs).Methods(http.MethodDelete)
 	internalRouter.HandleFunc("/my-schedule", handleGetMySchedule).Methods(http.MethodGet)
 
-	// APIs that require token
+	// APIs that does not require token
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()
 	externalRouter.HandleFunc("/login", handlerLoginUser).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/register", handlerRegisterUser).Methods(http.MethodPost)

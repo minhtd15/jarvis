@@ -9,7 +9,7 @@ type StudentResponse struct {
 }
 
 type StudentAttendanceScheduleResponse struct {
-	StudentId int64            `json:"stuudent_id"`
+	StudentId int64            `json:"student_id"`
 	Name      string           `json:"name"`
 	Dob       string           `json:"dob"`
 	CheckIn   []CheckInStudent `json:"checkIn"`
