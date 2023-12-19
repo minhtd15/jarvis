@@ -346,28 +346,14 @@ func handleInsertOneNewStudent(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 	}
 
-	keys := r.URL.Query()
-	courseId := keys.Get("course_id")
-	if courseId == "" {
-		// courseId is missing, return an error
-		log.Error("course_id parameter is missing")
-		http.Error(w, "course_id parameter is required", http.StatusBadRequest)
-		return
-	}
-
-	// First need to check whether the course exists in DB or not
-	err := userService.GetCourseExistenceById(courseId, ctx)
-	if err != nil {
-		if errors.Is(err, commonconstant.ErrCourseNotExist) {
-			log.WithError(err).Errorf("Cannot find the courseId %s", courseId)
-			http.Error(w, "Cannot find course according to requirement", http.StatusBadRequest)
-			return
-		}
-		log.WithError(err).Errorf("Error checking course existence: %s", err)
-		http.Error(w, "error checking course existence", http.StatusInternalServerError)
-		return
-	}
-
+	//keys := r.URL.Query()
+	//courseId := keys.Get("course_id")
+	//if courseId == "" {
+	//	// courseId is missing, return an error
+	//	log.Error("course_id parameter is missing")
+	//	http.Error(w, "course_id parameter is required", http.StatusBadRequest)
+	//	return
+	//}
 	bodyBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.WithError(err).Warningf("Error when reading from request")
@@ -387,7 +373,20 @@ func handleInsertOneNewStudent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = userService.InsertOneStudentService(rq, courseId, ctx)
+	// First need to check whether the course exists in DB or not
+	err = userService.GetCourseExistenceById(rq.CourseId, ctx)
+	if err != nil {
+		if errors.Is(err, commonconstant.ErrCourseNotExist) {
+			log.WithError(err).Errorf("Cannot find the courseId %s", rq.CourseId)
+			http.Error(w, "Cannot find course according to requirement", http.StatusBadRequest)
+			return
+		}
+		log.WithError(err).Errorf("Error checking course existence: %s", err)
+		http.Error(w, "error checking course existence", http.StatusInternalServerError)
+		return
+	}
+
+	err = userService.InsertOneStudentService(rq, rq.CourseId, ctx)
 	if err != nil {
 		log.WithError(err).Errorf("Error insert student %s", rq.Name)
 		http.Error(w, "Unable to insert one new student", http.StatusInternalServerError)
