@@ -65,6 +65,7 @@ func handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 			"user": api_response.UserDto{
 				UserId:       userEntityInfo.UserId,
 				UserName:     userEntityInfo.UserName,
+				FullName:     userEntityInfo.FullName,
 				Email:        userEntityInfo.Email,
 				Role:         userEntityInfo.Role,
 				DOB:          userEntityInfo.DOB,
