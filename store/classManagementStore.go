@@ -382,7 +382,7 @@ func (c *classManagementStore) AddNoteStore(noteRequest api_request.AddNoteReque
 
 	sqlQuery = "DELETE FROM CLASS_MANAGER WHERE USER_ID = ? AND COURSE_ID = ?"
 
-	for _, v := range add {
+	for _, v := range delete {
 		_, err = tx.ExecContext(ctx, sqlQuery, v, noteRequest.ClassId)
 		if err != nil {
 			// Rollback the transaction if an error occurs
