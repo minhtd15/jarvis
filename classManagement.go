@@ -33,4 +33,5 @@ type ClassStore interface {
 	GetAllSessionsByCourseIdStore(courseId string, ctx context.Context) ([]course_class.ClassEntity, error)
 	FixCourseInformationStore(rq api_request.ModifyCourseInformation, ctx context.Context) error
 	AddNoteStore(noteRequest api_request.AddNoteRequest, ctx context.Context) error
+	GetTaListInSessionStore(classId int, ctx context.Context) ([]string, error)
 }

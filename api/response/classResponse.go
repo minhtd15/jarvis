@@ -17,11 +17,12 @@ type CourseInfoResponse struct {
 }
 
 type ClassResponse struct {
-	ClassId   string `json:"class_id"`
-	StartTime string `json:"start_time"`
-	EndTime   string `json:"end_time"`
-	Date      string `json:"date"`
-	Room      string `json:"room"`
-	TypeClass string `json:"type_class"`
-	Note      string `json:"note"`
+	ClassId   string   `json:"class_id"`
+	StartTime string   `json:"start_time"`
+	EndTime   string   `json:"end_time"`
+	Date      string   `json:"date"`
+	Room      string   `json:"room"`
+	TypeClass string   `json:"type_class"`
+	Note      string   `json:"note"`
+	TaList    []string `json:"assistant"`
 }

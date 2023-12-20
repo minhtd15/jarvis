@@ -379,3 +379,18 @@ func (c *classManagementStore) AddNoteStore(noteRequest api_request.AddNoteReque
 	return nil
 
 }
+
+func (c *classManagementStore) GetTaListInSessionStore(classId int, ctx context.Context) ([]string, error) {
+	log.Infof("Start get TA List store for class %s", classId)
+
+	sqlQuery := "SELECT CM.USER_ID FROM CLASS_MANAGER CM JOIN USER U ON CM.USER_ID = U.USER_ID WHERE CM.COURSE_ID = ? AND U.JOB_POSITION = 'TA'"
+	var entities []string
+	err := c.db.SelectContext(ctx, &entities, sqlQuery, classId)
+
+	if err != nil {
+		log.WithError(err).Errorf("Failed to retrieve courses from the database")
+		return nil, err
+	}
+
+	return entities, nil
+}

@@ -1,5 +1,7 @@
 package request
 
+import "time"
+
 type NewCourseRequest struct {
 	CourseType  string   `json:"class_type"` // PS, SR, MT
 	StartTime   string   `json:"start_time"` // gio bat dau hoc
@@ -26,6 +28,10 @@ type ModifyCourseInformation struct {
 }
 
 type AddNoteRequest struct {
-	ClassId string `json:"class_id"`
-	Note    string `json:"note"`
+	ClassId   string    `json:"class_id"`
+	Date      string    `json:"date"`
+	StartTime time.Time `json:"startTime"`
+	EndTime   time.Time `json:"endTime"`
+	Room      int       `json:"room"`
+	Note      string    `json:"note"`
 }

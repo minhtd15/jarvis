@@ -9,6 +9,7 @@ import (
 	"education-website/entity/course_class"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -330,8 +331,22 @@ func (c classService) GetAllSessionsByCourseIdService(courseId string, ctx conte
 			Note:      v.Note.String,
 		}
 
+		intNumber, err := strconv.ParseInt(v.ClassId, 10, 64)
+		if err != nil {
+			// Handle the error if the conversion fails
+			fmt.Println("Error converting string to int:", err)
+			return nil, err
+		}
+
+		TaList, err := c.classStore.GetTaListInSessionStore(int(intNumber), ctx)
+		if err != nil {
+			log.WithError(err).Errorf("Error getting TA List store for classId %s", v.ClassId)
+			return nil, err
+		}
+		tmp.TaList = TaList
 		result = append(result, tmp)
 	}
+
 	return result, nil
 }
 
