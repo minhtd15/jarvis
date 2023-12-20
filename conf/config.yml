@@ -1,5 +1,5 @@
 server:
-  host: 127.0.0.1
+  host: 0.0.0.0
   port: 8081
   timeout:
     server: "30s"
@@ -10,18 +10,18 @@ server:
 
 XApiKey: "akfndkwfnklswnmljkfnmswljkfnwjlkngfjwenj"
 database:
-    host: mysql-242e090-ducminhtong1510-d931.a.aivencloud.com
-    port: 21440
-    user: avnadmin
-    pass: AVNS_PRb_ApuInzGLCBw_ux7
-    dbName: defaultdb
+  #  host: mysql-242e090-ducminhtong1510-d931.a.aivencloud.com
+  #  port: 21440
+  #  user: avnadmin
+  #  pass: AVNS_PRb_ApuInzGLCBw_ux7
+  #  dbName: defaultdb
   #  host: localhost
   #  port: 3306
   #  user: root
   #  pass: tongminh1510
   #  dbName: EDUDBTEST
-#  host: 10.96.210.203
-#  port: 3306
-#  user: fall2324w20g6
-#  pass: qwertyuiop
-#  dbName: fall2324w20g6_tmp
+  host: 10.96.210.203
+  port: 3306
+  user: fall2324w20g6
+  pass: qwertyuiop
+  dbName: fall2324w20g6_tmp
