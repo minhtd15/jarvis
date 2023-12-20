@@ -398,11 +398,11 @@ func (u *userManagementStore) GetUserByJobPosition(jobPos string, ctx context.Co
 			&entity.Email,
 			&entity.Role,
 			&entity.DOB,
-			&entity.JobPosition,
 			&entity.StartingDate,
+			&entity.JobPosition,
 			&entity.Password,
-			&entity.Gender,
 			&entity.FullName,
+			&entity.Gender,
 		)
 		if err != nil {
 			log.Errorf("Error scanning row: %v", err)
