@@ -3,10 +3,12 @@ package api
 import (
 	api_request "education-website/api/request"
 	"encoding/json"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/apm"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 )
 
 func handleInsertNewClass(w http.ResponseWriter, r *http.Request) {
@@ -342,7 +344,31 @@ func AddNoteByClassId(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = classService.AddNoteService(noteRequest, ctx)
+	intNumber, err := strconv.ParseInt(noteRequest.ClassId, 10, 64)
+	if err != nil {
+		// Handle the error if the conversion fails
+		fmt.Println("Error converting string to int:", err)
+		return
+	}
+
+	taList, err := classService.GetTAListService(int(intNumber), ctx)
+
+	addTA := Difference(noteRequest.TaList, taList)    // get the new TA to add
+	deleteTA := Difference(taList, noteRequest.TaList) // get the new TA to delete
+
+	log.Infof("ADD TA: %v", addTA)
+	log.Infof("DELETE TA: %v", deleteTA)
+
+	if noteRequest.Check {
+		response := map[string]interface{}{
+			"message": "You are not allowed to access to this function",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(response)
+	}
+
+	err = classService.AddNoteService(noteRequest, addTA, deleteTA, ctx)
 	if err != nil {
 		log.WithError(err).Warningf("Error service add note")
 		http.Error(w, "Error service add note", http.StatusInternalServerError)
@@ -356,4 +382,23 @@ func AddNoteByClassId(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
+}
+
+func Difference(arr1, arr2 []string) []string {
+	diffMap := make(map[string]bool)
+
+	// Mark all elements in arr2 as true
+	for _, num := range arr2 {
+		diffMap[num] = true
+	}
+
+	// Filter elements in arr1 that are not in arr2
+	var result []string
+	for _, num := range arr1 {
+		if !diffMap[num] {
+			result = append(result, num)
+		}
+	}
+
+	return result
 }

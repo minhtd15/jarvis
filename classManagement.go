@@ -18,7 +18,8 @@ type ClassService interface {
 	DeleteClassByClassId(rq api_request.DeleteClassInfo, ctx context.Context) error
 	GetAllSessionsByCourseIdService(courseId string, ctx context.Context) ([]api_response.ClassResponse, error)
 	FixCourseInformationService(rq api_request.ModifyCourseInformation, ctx context.Context) error
-	AddNoteService(noteRequest api_request.AddNoteRequest, ctx context.Context) error
+	AddNoteService(noteRequest api_request.AddNoteRequest, add []string, delete []string, ctx context.Context) error
+	GetTAListService(classId int, ctx context.Context) ([]string, error)
 }
 
 type ClassStore interface {
@@ -32,6 +33,6 @@ type ClassStore interface {
 	DeleteClassByIdStore(classId string, ctx context.Context) error
 	GetAllSessionsByCourseIdStore(courseId string, ctx context.Context) ([]course_class.ClassEntity, error)
 	FixCourseInformationStore(rq api_request.ModifyCourseInformation, ctx context.Context) error
-	AddNoteStore(noteRequest api_request.AddNoteRequest, ctx context.Context) error
+	AddNoteStore(noteRequest api_request.AddNoteRequest, add []string, delete []string, ctx context.Context) error
 	GetTaListInSessionStore(classId int, ctx context.Context) ([]string, error)
 }

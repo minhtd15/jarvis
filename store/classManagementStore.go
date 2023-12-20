@@ -77,7 +77,7 @@ func (c *classManagementStore) InsertNewCourseStore(entity course_class.CourseEn
 	}
 
 	// insert default main teacher in every class of this course
-	sqlQuery := "INSERT INTO CLASS_MANAGER (USER_ID, COURSE_ID, CLASS_ROLE, CLASS_DATE) VALUES (?, ?, ?, ?)"
+	sqlQuery := "INSERT INTO CLASS_MANAGER (USER_ID, COURSE_ID, CLASS_ROLE) VALUES (?, ?, ?)"
 	tmp, err := tx.Prepare(sqlQuery)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to prepare SQL statement for CLASS_MANAGER")
@@ -98,7 +98,7 @@ func (c *classManagementStore) InsertNewCourseStore(entity course_class.CourseEn
 			return err
 		}
 
-		_, err = tmp.Exec(userId, id, "Teacher", v.Format("2006-01-02"))
+		_, err = tmp.Exec(userId, id, "Teacher")
 		if err != nil {
 			log.WithError(err).Errorf("Failed to insert main teacher into the database")
 			return err
@@ -348,7 +348,7 @@ func (c *classManagementStore) FixCourseInformationStore(rq api_request.ModifyCo
 
 }
 
-func (c *classManagementStore) AddNoteStore(noteRequest api_request.AddNoteRequest, ctx context.Context) error {
+func (c *classManagementStore) AddNoteStore(noteRequest api_request.AddNoteRequest, add []string, delete []string, ctx context.Context) error {
 	log.Infof("Start add note store for class %s", noteRequest.ClassId)
 	// Begin a transaction
 	tx, err := c.db.BeginTx(ctx, nil)
@@ -358,15 +358,40 @@ func (c *classManagementStore) AddNoteStore(noteRequest api_request.AddNoteReque
 	}
 
 	// UPDATE IN COURSE TABLE
-	sqlQuery := "UPDATE CLASS SET NOTE = ? WHERE CLASS_ID = ?"
+	sqlQuery := "UPDATE CLASS SET START_TIME = ?, END_TIME = ?, DATE = ?, NOTE = ? WHERE CLASS_ID = ?"
 
-	_, err = tx.ExecContext(ctx, sqlQuery, noteRequest.Note, noteRequest.ClassId)
+	_, err = tx.ExecContext(ctx, sqlQuery, noteRequest.StartTime, noteRequest.EndTime, noteRequest.Date, noteRequest.Note, noteRequest.ClassId)
 	if err != nil {
 		// Rollback the transaction if an error occurs
 		tx.Rollback()
 		log.WithError(err).Errorf("Error starting transaction for note class information %s", noteRequest)
 		return err
 	}
+
+	sqlQuery = "INSERT INTO CLASS_MANAGER (USER_ID, COURSE_ID, CLASS_ROLE) VALUES (?, ?, ?)"
+
+	for _, v := range add {
+		_, err = tx.ExecContext(ctx, sqlQuery, v, noteRequest.ClassId, "TA")
+		if err != nil {
+			// Rollback the transaction if an error occurs
+			tx.Rollback()
+			log.WithError(err).Errorf("Error starting transaction for note class information %s", noteRequest)
+			return err
+		}
+	}
+
+	sqlQuery = "DELETE FROM CLASS_MANAGER WHERE USER_ID = ? AND COURSE_ID = ?"
+
+	for _, v := range add {
+		_, err = tx.ExecContext(ctx, sqlQuery, v, noteRequest.ClassId)
+		if err != nil {
+			// Rollback the transaction if an error occurs
+			tx.Rollback()
+			log.WithError(err).Errorf("Error starting transaction for note class information %s", noteRequest)
+			return err
+		}
+	}
+
 	// Commit the transaction if everything is successful
 	err = tx.Commit()
 	if err != nil {

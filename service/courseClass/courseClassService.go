@@ -354,6 +354,10 @@ func (c classService) FixCourseInformationService(rq api_request.ModifyCourseInf
 	return c.classStore.FixCourseInformationStore(rq, ctx)
 }
 
-func (c classService) AddNoteService(noteRequest api_request.AddNoteRequest, ctx context.Context) error {
-	return c.classStore.AddNoteStore(noteRequest, ctx)
+func (c classService) AddNoteService(noteRequest api_request.AddNoteRequest, add []string, delete []string, ctx context.Context) error {
+	return c.classStore.AddNoteStore(noteRequest, add, delete, ctx)
+}
+
+func (c classService) GetTAListService(classId int, ctx context.Context) ([]string, error) {
+	return c.classStore.GetTaListInSessionStore(classId, ctx)
 }
