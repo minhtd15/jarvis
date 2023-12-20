@@ -334,6 +334,12 @@ func AddNoteByClassId(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	role, ok := r.Context().Value("role").(string)
+	if !ok {
+		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
+		return
+	}
+
 	json.NewDecoder(r.Body)
 	defer r.Body.Close()
 	var noteRequest api_request.AddNoteRequest
@@ -359,7 +365,7 @@ func AddNoteByClassId(w http.ResponseWriter, r *http.Request) {
 	log.Infof("ADD TA: %v", addTA)
 	log.Infof("DELETE TA: %v", deleteTA)
 
-	if noteRequest.Check {
+	if noteRequest.Check && role == "user" {
 		response := map[string]interface{}{
 			"message": "You are not allowed to access to this function",
 		}
