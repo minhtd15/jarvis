@@ -161,9 +161,8 @@ func NewRouter(config Config) http.Handler {
 	//internalRouter.HandleFunc("/delete-user", handleDeleteUser).Methods(http.MethodDelete)
 	internalRouter.HandleFunc("/delete-class", handleDeleteSessionByClassIs).Methods(http.MethodDelete)
 	internalRouter.HandleFunc("/my-schedule", handleGetMySchedule).Methods(http.MethodGet)
-	internalRouter.HandleFunc("/fix-course-information", handleFixCourseInformation).Methods(http.MethodPut)\
+	internalRouter.HandleFunc("/fix-course-information", handleFixCourseInformation).Methods(http.MethodPut)
 	internalRouter.HandleFunc("/note", AddNoteByClassId).Methods(http.MethodPost)
-
 
 	// APIs that does not require token
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()
@@ -180,7 +179,6 @@ func NewRouter(config Config) http.Handler {
 	externalRouter.HandleFunc("/check-attendance-student", handlePostStudentAttendance).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/fix-attendance-status", updateStudentAttendanceStatus).Methods(http.MethodPut)
 	externalRouter.HandleFunc("/course-sessions", handleGetAllSessionsByCourseId).Methods(http.MethodGet)
-
 
 	// Serving static files from the "./static" directory
 	r.PathPrefix("/web/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir("build"))))
