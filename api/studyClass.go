@@ -414,27 +414,12 @@ func handleGetCheckInWorkerHistory(w http.ResponseWriter, r *http.Request) {
 	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "GET the check in history of course")
 	logger.Infof("this API is used to GET the check in history of course")
 
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.WithError(err).Warningf("Error when reading from request")
-		http.Error(w, "Invalid format", 252001)
-		return
-	}
+	keys := r.URL.Query()
+	courseId := keys.Get("courseId")
 
-	json.NewDecoder(r.Body)
-	defer r.Body.Close()
-
-	var rq api_request.CheckInAttendanceWorkerRequest
-	err = json.Unmarshal(bodyBytes, &rq)
+	rs, err := classService.GetCheckInHistoryByCourseId(courseId, ctx)
 	if err != nil {
-		log.WithError(err).Warningf("Error marshalling body from request update attendance worker")
-		http.Error(w, "Invalid format", 252001)
-		return
-	}
-
-	rs, err := classService.GetCheckInHistoryByCourseId(rq.CourseId, ctx)
-	if err != nil {
-		log.WithError(err).Warningf("Error get check in history for course %s", rq.CourseId)
+		log.WithError(err).Warningf("Error get check in history for course %s", courseId)
 		http.Error(w, "Error get check in history", http.StatusInternalServerError)
 		return
 	}

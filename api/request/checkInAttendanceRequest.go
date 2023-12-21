@@ -5,3 +5,7 @@ type CheckInAttendanceWorkerRequest struct {
 	ClassId      string `json:"class_id"`
 	CourseTypeId string `json:"course_type_id"`
 }
+
+type CheckInWorkerHistory struct {
+	CourseId string `json:"courseId"`
+}
