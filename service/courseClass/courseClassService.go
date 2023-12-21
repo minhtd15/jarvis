@@ -361,3 +361,24 @@ func (c classService) AddNoteService(noteRequest api_request.AddNoteRequest, add
 func (c classService) GetTAListService(classId int, ctx context.Context) ([]string, error) {
 	return c.classStore.GetTaListInSessionStore(classId, ctx)
 }
+
+func (c classService) GetCheckInHistoryByCourseId(courseId string, ctx context.Context) ([]api_response.CheckInHistory, error) {
+	log.Infof("Start to get check in history")
+
+	rs, err := c.classStore.GetCheckInHistoryByCourseIdStore(courseId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error getting check in history store for course %s", courseId)
+		return nil, err
+	}
+	var result []api_response.CheckInHistory
+	for _, v := range rs {
+		tmp := api_response.CheckInHistory{
+			UserId:      v.UserId,
+			ClassId:     v.ClassId,
+			CheckInTime: v.CheckInTime,
+			Status:      v.Status,
+		}
+		result = append(result, tmp)
+	}
+	return result, nil
+}

@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/xuri/excelize/v2"
 	"golang.org/x/crypto/bcrypt"
+	"math/rand"
 	"mime/multipart"
 	"net/smtp"
 	"strconv"
@@ -299,21 +300,22 @@ func (u userService) InsertOneStudentService(request api_request.NewStudentReque
 	return u.userStore.InsertOneStudentStore(request, courseId, ctx)
 }
 
-func SendDailyEmail() {
+func SendDailyEmail(email string, digitCode int) {
 	// Dữ liệu cần hiển thị trong email (ví dụ)
-	data := "Dữ liệu của bạn: <strong>Thông tin lịch làm ngày hôm nay</strong>"
+	data := "<strong>Mã reset mật khẩu</strong>: Không được chia sẻ mã này cho bất kì ai"
 
+	s := fmt.Sprintf("%s %v", data, digitCode)
 	// Định dạng nội dung email với dữ liệu
-	emailBody := fmt.Sprintf("<html><body>%s</body></html>", data)
+	emailBody := fmt.Sprintf("<html><body>%s</body></html>", s)
 
 	// Gửi email
-	err := sendEmail("cthanhnguyen03@gmail.com", "Subject: Daily Schedule", emailBody)
+	err := SendEmail(email, "Subject: Forgot password", emailBody)
 	if err != nil {
 		fmt.Println("Error sending email:", err)
 	}
 }
 
-func sendEmail(recipient, subject, body string) error {
+func SendEmail(recipient, subject, body string) error {
 	// Địa chỉ email và mật khẩu của người gửi
 	from := "ducminhtong1510@gmail.com"
 	password := "hiks irqs gwyz eygn"
@@ -463,4 +465,58 @@ func (u userService) GetAllInChargeCourse(username string, ctx context.Context) 
 func (u userService) CheckInWorkerAttendanceService(rq api_request.CheckInAttendanceWorkerRequest, userId string, ctx context.Context) error {
 	log.Infof("Start to get count attendance service for worker %v", rq)
 	return u.userStore.CheckInWorkerAttendanceStore(rq, userId, ctx)
+}
+
+func (u userService) CheckEmailExistenceService(email string, ctx context.Context) (bool, error) {
+	return u.userStore.CheckEmailExistenceStore(email, ctx)
+}
+
+func (u userService) PostNewForgotPasswordCode(email string, ctx context.Context) (*int, error) {
+	log.Infof("Start to get new digit code for email: %v", email)
+	rand.Seed(time.Now().UnixNano())
+
+	// Generate a random integer between 1 and 100
+	digitCode := rand.Intn(99999) + 1
+
+	err := u.userStore.PostNewForgotPasswordCodeStore(email, digitCode, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to post forgot password code store")
+		return nil, err
+	}
+
+	return &digitCode, nil
+}
+
+func (u userService) CheckFitDigitCode(email string, code int, ctx context.Context) (*bool, error) {
+	log.Infof("Start to get digit code to check: %v", code)
+
+	check, err := u.userStore.CheckFitDigitCodeStore(email, code, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to post forgot password code store")
+		return nil, err
+	}
+
+	return check, nil
+}
+
+func (u userService) UpdateNewPasswordInfo(newPassword string, email string, ctx context.Context) (*api_response.UserDto, error) {
+	log.Infof("Start to update new password")
+
+	userInfo, err := u.userStore.UpdateNewPasswordInfoStore(newPassword, email, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to post new password code store")
+		return nil, err
+	}
+
+	rs := api_response.UserDto{
+		UserId:       userInfo.UserId,
+		FullName:     userInfo.FullName,
+		UserName:     userInfo.UserName,
+		Role:         userInfo.Role,
+		DOB:          userInfo.DOB,
+		JobPosition:  userInfo.JobPosition,
+		StartingDate: userInfo.StartingDate,
+	}
+
+	return &rs, err
 }

@@ -16,3 +16,10 @@ type CourseEntity struct {
 	TotalSessions int64          `db:"TOTAL_SESSIONS"`
 	Location      sql.NullString `db:"LOCATION"`
 }
+
+type CheckInHistoryEntity struct {
+	UserId      string `db:"USER_ID"`
+	ClassId     int    `db:"CLASS_ID"`
+	CheckInTime string `db:"CHECKIN_TIME"`
+	Status      string `db:"STATUS"`
+}

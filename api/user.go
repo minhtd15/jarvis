@@ -568,13 +568,13 @@ func handleDeleteCourse(w http.ResponseWriter, r *http.Request) {
 //	}
 //}
 
-func handleSendDailyEmail(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD", "delete course according to request")
-	logger.Infof("API Delete course")
-
-	user.SendDailyEmail()
-}
+//func handleSendDailyEmail(w http.ResponseWriter, r *http.Request) {
+//	ctx := apm.DetachedContext(r.Context())
+//	logger := GetLoggerWithContext(ctx).WithField("METHOD", "delete course according to request")
+//	logger.Infof("API Delete course")
+//
+//	user.SendDailyEmail()
+//}
 
 func getStudentsByCourse(w http.ResponseWriter, r *http.Request) {
 	ctx := apm.DetachedContext(r.Context())
@@ -735,7 +735,6 @@ func handleCheckInAttendanceClass(w http.ResponseWriter, r *http.Request) {
 	logger := GetLoggerWithContext(ctx).WithField("METHOD POST", "Check in worker's attendance to calculate salary")
 	logger.Infof("this API is used to delete class via classId")
 
-	userName, ok := r.Context().Value("username").(string)
 	userId, ok := r.Context().Value("user_id").(string)
 	if !ok {
 		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
@@ -757,24 +756,6 @@ func handleCheckInAttendanceClass(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.WithError(err).Warningf("Error marshalling body from request update attendance worker")
 		http.Error(w, "Invalid format", 252001)
-		return
-	}
-
-	classInfoRequest := api_request.CourseInfoRequest{
-		CourseId: rq.CourseId,
-	}
-
-	// check if the username is in charge the right class
-	personInCharge, err := classService.GetCourseInformationByClassName(classInfoRequest, ctx)
-	if err != nil {
-		log.WithError(err).Warningf("Error get course to check person in charge to update attendance worker")
-		http.Error(w, "Error internal", 252001)
-		return
-	}
-
-	if userName != personInCharge.MainTeacher {
-		log.WithError(err).Warningf("wrong user to change the class attendance")
-		http.Error(w, "You are not allowed to change other's attendance", http.StatusForbidden)
 		return
 	}
 

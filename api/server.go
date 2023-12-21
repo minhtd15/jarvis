@@ -3,12 +3,10 @@ package api
 import (
 	"context"
 	batman "education-website"
-	"education-website/service/user"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/robfig/cron/v3"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/apm/module/apmlogrus"
@@ -163,6 +161,7 @@ func NewRouter(config Config) http.Handler {
 	internalRouter.HandleFunc("/my-schedule", handleGetMySchedule).Methods(http.MethodGet)
 	internalRouter.HandleFunc("/fix-course-information", handleFixCourseInformation).Methods(http.MethodPut)
 	internalRouter.HandleFunc("/note", AddNoteByClassId).Methods(http.MethodPost)
+	internalRouter.HandleFunc("/check-in-history", handleGetCheckInWorkerHistory).Methods(http.MethodGet)
 
 	// APIs that does not require token
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()
@@ -173,20 +172,23 @@ func NewRouter(config Config) http.Handler {
 	externalRouter.HandleFunc("/all-courses", handleGetAllCourseInformation).Methods(http.MethodGet)
 	//internalRouter.HandleFunc("/class-information", handleGetClassInformation).Methods(http.MethodGet)
 	externalRouter.HandleFunc("/send-email", handleEmailJobs).Methods(http.MethodPost)
-	externalRouter.HandleFunc("/send-daily-email", handleSendDailyEmail).Methods(http.MethodGet)
+	//externalRouter.HandleFunc("/send-daily-email", handleSendDailyEmail).Methods(http.MethodGet)
 	externalRouter.HandleFunc("/student-check-in", checkInStudentAttendance).Methods(http.MethodGet)
 	externalRouter.HandleFunc("/students", getStudentsByCourse).Methods(http.MethodGet)
 	externalRouter.HandleFunc("/check-attendance-student", handlePostStudentAttendance).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/fix-attendance-status", updateStudentAttendanceStatus).Methods(http.MethodPut)
 	externalRouter.HandleFunc("/course-sessions", handleGetAllSessionsByCourseId).Methods(http.MethodGet)
+	externalRouter.HandleFunc("/forgot-password", handleSendEmailForgotPassword).Methods(http.MethodPost)
+	externalRouter.HandleFunc("/send-digit", handleCheckDigitCodeForgotPassword).Methods(http.MethodPost)
+	externalRouter.HandleFunc("/new-password", handleSetNewPassword).Methods(http.MethodPost)
 
 	// Serving static files from the "./static" directory
 	r.PathPrefix("/web/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir("build"))))
 
 	// Set up cron job to run sendDailyEmail at 7 AM daily
-	con := cron.New()
-	con.AddFunc("0 7 * * *", user.SendDailyEmail)
-	con.Start()
+	//con := cron.New()
+	//con.AddFunc("0 7 * * *", user.SendDailyEmail)
+	//con.Start()
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000"},

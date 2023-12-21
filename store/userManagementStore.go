@@ -13,6 +13,7 @@ import (
 	"education-website/entity/user"
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 	"strconv"
 	"time"
 )
@@ -684,7 +685,7 @@ func (u *userManagementStore) CheckInWorkerAttendanceStore(rq api_request.CheckI
 	// UPDATE IN COURSE TABLE
 	sqlQuery := "INSERT INTO ATTENDANCE_HISTORY (USER_ID, CLASS_NAME, COURSE_TYPE, CHECKIN_TIME, STATUS) VALUES (?, ?, ?, ?, ?)"
 
-	_, err = tx.ExecContext(ctx, sqlQuery, userId, rq.CourseName, rq.CourseTypeId, currentTime, "DONE")
+	_, err = tx.ExecContext(ctx, sqlQuery, userId, rq.ClassId, rq.CourseTypeId, currentTime, "DONE")
 	if err != nil {
 		// Rollback the transaction if an error occurs
 		tx.Rollback()
@@ -702,4 +703,166 @@ func (u *userManagementStore) CheckInWorkerAttendanceStore(rq api_request.CheckI
 
 	log.Infof("Successful CHECK IN ATTENDANCE store")
 	return nil
+}
+
+func (u *userManagementStore) CheckEmailExistenceStore(email string, ctx context.Context) (bool, error) {
+	log.Infof("Check email existence store")
+	sqlQuery := "SELECT COUNT(*) FROM USER WHERE EMAIL = ?"
+
+	var count int
+
+	// execute sql query
+	err := u.db.QueryRowxContext(ctx, sqlQuery, email).Scan(&count)
+	if err != nil {
+		log.WithError(err).Errorf("Cannot get info from database for user: %s", email)
+		return false, err
+	}
+
+	if count == 0 {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (u userManagementStore) PostNewForgotPasswordCodeStore(email string, digitCode int, ctx context.Context) error {
+	log.Infof("post new digit code store forgot password")
+
+	// Start a transaction
+	tx, err := u.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Errorf("Error starting transaction: %v", err)
+		return err
+	}
+
+	defer func(tx *sql.Tx) {
+		err := tx.Rollback()
+		if err != nil {
+			log.Errorf("Error add new digit code to reset password: %v", err)
+		}
+	}(tx)
+
+	sqlQuery := "UPDATE USER SET RESET_PASSWORD = ? WHERE EMAIL = ?"
+
+	_, err = tx.ExecContext(ctx, sqlQuery, digitCode, email)
+	if err != nil {
+		log.Errorf("Error add new digit code to reset password: %v", err)
+		return err
+	}
+
+	// Commit the transaction if everything is successful
+	if err := tx.Commit(); err != nil {
+		log.Errorf("Error committing transaction: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (u userManagementStore) CheckFitDigitCodeStore(email string, code int, ctx context.Context) (*bool, error) {
+	log.Infof("Get digit code store")
+
+	sqlQuery := "SELECT RESET_PASSWORD FROM USER WHERE EMAIL = ?"
+
+	var rs bool
+	rs = false
+	var dbCode int
+	err := u.db.QueryRowContext(ctx, sqlQuery, email).Scan(&dbCode)
+	if err != nil {
+		log.Errorf("Error executing SQL query: %v", err)
+		return nil, err
+	}
+
+	if dbCode == code {
+		err = u.DeleteDigiCode(email, ctx)
+		if err != nil {
+			log.Errorf("Error executing SQL query: %v", err)
+			return nil, err
+		}
+		rs = true
+	}
+
+	log.Infof("Successfull get data DIGIT CODE FROM DB, and result code is %v", rs)
+	return &rs, nil
+}
+
+func (u userManagementStore) DeleteDigiCode(email string, ctx context.Context) error {
+	log.Infof("delete digit code store")
+	tx, err := u.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Errorf("Error starting transaction: %v", err)
+		return err
+	}
+
+	defer tx.Rollback()
+
+	sqlQuery := "UPDATE USER  SET RESET_PASSWORD = ? WHERE EMAIL = ?"
+	_, err = tx.ExecContext(ctx, sqlQuery, nil, email)
+	if err != nil {
+		log.Errorf("Error deleting class: %v", err)
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Errorf("Error committing transaction: %v", err)
+		return err
+	}
+
+	log.Infof("reset password for user %s deleted successfully", email)
+	return nil
+}
+
+func (u userManagementStore) UpdateNewPasswordInfoStore(newPassword string, email string, ctx context.Context) (*user.UserEntity, error) {
+	log.Infof("Start to update new password on db")
+
+	// Start a transaction
+	tx, err := u.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Errorf("Error starting transaction: %v", err)
+		return nil, err
+	}
+
+	// Defer a function to handle transaction commit or rollback
+	defer func() {
+		if err != nil {
+			log.Errorf("Rolling back transaction: %v", tx.Rollback())
+		} else {
+			log.Infof("Committing transaction")
+			err = tx.Commit()
+			if err != nil {
+				log.Errorf("Error committing transaction: %v", err)
+			}
+		}
+	}()
+
+	// Hash the new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), 12)
+	if err != nil {
+		log.WithError(err).Errorf("Error encrypting password")
+		return nil, err
+	}
+
+	// Select user information for the specified email and lock the row for update
+	sqlSelect := "SELECT USER_ID, USERNAME, FULLNAME, ROLE FROM USER WHERE EMAIL = ? FOR UPDATE"
+
+	var entities user.UserEntity
+
+	// Execute the SQL query within the transaction
+	err = tx.QueryRowContext(ctx, sqlSelect, email).Scan(&entities.UserId, &entities.UserName, &entities.FullName, &entities.Role)
+	if err != nil {
+		log.Errorf("Error executing SQL SELECT query: %v", err)
+		return nil, err
+	}
+
+	// Update the user's password
+	sqlUpdate := "UPDATE USER SET PASSWORD = ? WHERE USER_ID = ?"
+	_, err = tx.ExecContext(ctx, sqlUpdate, hashedPassword, entities.UserId)
+	if err != nil {
+		log.Errorf("Error executing SQL UPDATE query: %v", err)
+		return nil, err
+	}
+
+	// Log success and return the updated user entity
+	log.Infof("Successfully updated password for user with ID: %d", entities.UserId)
+	return &entities, nil
 }

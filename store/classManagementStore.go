@@ -419,3 +419,34 @@ func (c *classManagementStore) GetTaListInSessionStore(classId int, ctx context.
 
 	return entities, nil
 }
+
+func (c *classManagementStore) GetCheckInHistoryByCourseIdStore(courseId string, ctx context.Context) ([]course_class.CheckInHistoryEntity, error) {
+	log.Infof("Start get check in history List store for course %s", courseId)
+
+	var entities []course_class.CheckInHistoryEntity
+	sqlQuery := "SELECT A.USER_ID, A.CLASS_NAME, A.CHECKIN_TIME, A.STATUS FROM ATTENDANCE_HISTORY A JOIN CLASS C ON A.CLASS_NAME = C.CLASS_ID WHERE C.COURSE_ID = ?"
+	args := []interface{}{courseId}
+
+	rows, err := c.db.QueryxContext(ctx, sqlQuery, args...)
+	if err != nil {
+		log.WithError(err).Errorf("Cannot get check in history from the database for course: %s", courseId)
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var entity course_class.CheckInHistoryEntity
+		if err := rows.Scan(&entity.UserId, &entity.ClassId, &entity.CheckInTime, &entity.Status); err != nil {
+			log.WithError(err).Errorf("Error scanning row: %s", err.Error())
+			return nil, err
+		}
+		entities = append(entities, entity)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.WithError(err).Errorf("Error iterating rows: %s", err.Error())
+		return nil, err
+	}
+	return entities, nil
+}

@@ -408,3 +408,43 @@ func Difference(arr1, arr2 []string) []string {
 
 	return result
 }
+
+func handleGetCheckInWorkerHistory(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "GET the check in history of course")
+	logger.Infof("this API is used to GET the check in history of course")
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	var rq api_request.CheckInAttendanceWorkerRequest
+	err = json.Unmarshal(bodyBytes, &rq)
+	if err != nil {
+		log.WithError(err).Warningf("Error marshalling body from request update attendance worker")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	rs, err := classService.GetCheckInHistoryByCourseId(rq.CourseId, ctx)
+	if err != nil {
+		log.WithError(err).Warningf("Error get check in history for course %s", rq.CourseId)
+		http.Error(w, "Error get check in history", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful getting check in history for course",
+		"data":    rs,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}

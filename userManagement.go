@@ -50,6 +50,10 @@ type UserService interface {
 	UpdateStudentAttendanceService(rq api_request.StudentAttendanceRequest, ctx context.Context) error
 	GetAllInChargeCourse(username string, ctx context.Context) ([]api_response.CourseResponse, error)
 	CheckInWorkerAttendanceService(rq api_request.CheckInAttendanceWorkerRequest, userId string, ctx context.Context) error
+	CheckEmailExistenceService(email string, ctx context.Context) (bool, error)
+	PostNewForgotPasswordCode(email string, ctx context.Context) (*int, error)
+	CheckFitDigitCode(email string, code int, ctx context.Context) (*bool, error)
+	UpdateNewPasswordInfo(newPassword string, email string, ctx context.Context) (*api_response.UserDto, error)
 }
 
 type UserStore interface {
@@ -70,4 +74,8 @@ type UserStore interface {
 	UpdateStudentAttendanceStore(rq api_request.StudentAttendanceRequest, ctx context.Context) error
 	GetUserCourseInChargeStore(username string, ctx context.Context) ([]course_class.CourseEntity, error)
 	CheckInWorkerAttendanceStore(rq api_request.CheckInAttendanceWorkerRequest, userId string, ctx context.Context) error
+	CheckEmailExistenceStore(email string, ctx context.Context) (bool, error)
+	PostNewForgotPasswordCodeStore(email string, digitCode int, ctx context.Context) error
+	CheckFitDigitCodeStore(email string, code int, ctx context.Context) (*bool, error)
+	UpdateNewPasswordInfoStore(newPassword string, email string, ctx context.Context) (*user.UserEntity, error)
 }

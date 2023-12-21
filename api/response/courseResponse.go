@@ -9,3 +9,10 @@ type CourseResponse struct {
 	StudyDays  string `json:"study_days"`
 	Location   string `json:"location"`
 }
+
+type CheckInHistory struct {
+	UserId      string `json:"userId"`
+	ClassId     int    `json:"classId"`
+	CheckInTime string `json:"checkInTime"`
+	Status      string `json:"status"`
+}

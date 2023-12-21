@@ -20,6 +20,7 @@ type ClassService interface {
 	FixCourseInformationService(rq api_request.ModifyCourseInformation, ctx context.Context) error
 	AddNoteService(noteRequest api_request.AddNoteRequest, add []string, delete []string, ctx context.Context) error
 	GetTAListService(classId int, ctx context.Context) ([]string, error)
+	GetCheckInHistoryByCourseId(courseId string, ctx context.Context) ([]api_response.CheckInHistory, error)
 }
 
 type ClassStore interface {
@@ -35,4 +36,5 @@ type ClassStore interface {
 	FixCourseInformationStore(rq api_request.ModifyCourseInformation, ctx context.Context) error
 	AddNoteStore(noteRequest api_request.AddNoteRequest, add []string, delete []string, ctx context.Context) error
 	GetTaListInSessionStore(classId int, ctx context.Context) ([]string, error)
+	GetCheckInHistoryByCourseIdStore(courseId string, ctx context.Context) ([]course_class.CheckInHistoryEntity, error)
 }
