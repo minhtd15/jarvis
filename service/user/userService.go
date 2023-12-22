@@ -365,6 +365,7 @@ func (u userService) GetAllUserByJobPosition(jobPos string, ctx context.Context)
 			Role:        v.Role,
 			StartDate:   v.StartingDate,
 			FullName:    v.FullName,
+			Gender:      v.Gender,
 		}
 		rs = append(rs, &tmp)
 	}

@@ -390,6 +390,7 @@ func (u *userManagementStore) GetUserByJobPosition(jobPos string, ctx context.Co
 	}
 	defer rows.Close()
 
+	var tmp sql.NullString
 	// Iterate through the result set and scan into UserEntity structs
 	for rows.Next() {
 		var entity user.UserEntity
@@ -404,6 +405,7 @@ func (u *userManagementStore) GetUserByJobPosition(jobPos string, ctx context.Co
 			&entity.Password,
 			&entity.FullName,
 			&entity.Gender,
+			&tmp,
 		)
 		if err != nil {
 			log.Errorf("Error scanning row: %v", err)
@@ -734,23 +736,18 @@ func (u userManagementStore) PostNewForgotPasswordCodeStore(email string, digitC
 		return err
 	}
 
-	defer func(tx *sql.Tx) {
-		err := tx.Rollback()
-		if err != nil {
-			log.Errorf("Error add new digit code to reset password: %v", err)
-		}
-	}(tx)
-
 	sqlQuery := "UPDATE USER SET RESET_PASSWORD = ? WHERE EMAIL = ?"
 
 	_, err = tx.ExecContext(ctx, sqlQuery, digitCode, email)
 	if err != nil {
+		tx.Rollback()
 		log.Errorf("Error add new digit code to reset password: %v", err)
 		return err
 	}
 
 	// Commit the transaction if everything is successful
 	if err := tx.Commit(); err != nil {
+		tx.Rollback()
 		log.Errorf("Error committing transaction: %v", err)
 		return err
 	}
