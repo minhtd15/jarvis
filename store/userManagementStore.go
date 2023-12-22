@@ -37,9 +37,9 @@ func (u *userManagementStore) GetByUserNameStore(userName string, email string, 
 
 	entity := batman.UserResponse{}
 	sqlQuery := "SELECT * FROM USER WHERE USERNAME = ? OR EMAIL = ? OR USER_ID = ?"
-
+	var tmp sql.NullString
 	// execute sql query
-	err := u.db.QueryRowxContext(ctx, sqlQuery, userName, email, userId).Scan(&entity.UserId, &entity.UserName, &entity.Email, &entity.Role, &entity.DOB, &entity.StartDate, &entity.JobPosition, &entity.Password, &entity.FullName, &entity.Gender)
+	err := u.db.QueryRowxContext(ctx, sqlQuery, userName, email, userId).Scan(&entity.UserId, &entity.UserName, &entity.Email, &entity.Role, &entity.DOB, &entity.StartDate, &entity.JobPosition, &entity.Password, &entity.FullName, &entity.Gender, &tmp)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			//log.WithError(err).Errorf("Cannot find user with user name: %s", userName)
