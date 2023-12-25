@@ -72,7 +72,7 @@ func (u *userManagementStore) InsertNewUserStore(newUser user.UserEntity, ctx co
 		}
 	}()
 
-	sqlQuery := "INSERT INTO USER VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	sqlQuery := "INSERT INTO USER VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	stmt, err := tx.Prepare(sqlQuery)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to prepare SQL statement")
@@ -80,8 +80,9 @@ func (u *userManagementStore) InsertNewUserStore(newUser user.UserEntity, ctx co
 	}
 	defer stmt.Close()
 
+	tmp := 0
 	// Execute the prepared statement
-	result, err := stmt.Exec(newUser.UserId, newUser.UserName, newUser.Email, newUser.Role, newUser.DOB, newUser.StartingDate, newUser.JobPosition, newUser.Password, newUser.FullName, newUser.Gender)
+	result, err := stmt.Exec(newUser.UserId, newUser.UserName, newUser.Email, newUser.Role, newUser.DOB, newUser.StartingDate, newUser.JobPosition, newUser.Password, newUser.FullName, newUser.Gender, tmp)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to insert user into the database")
 		return err
@@ -160,7 +161,7 @@ func (u *userManagementStore) GetSalaryReportStore(userName string, month string
 		"WHERE s.MONTH = ? and s.YEAR = ?"
 	args := []interface{}{month, year}
 
-	if userName != "" {
+	if userName != "" && userName != "undefined" {
 		sqlQuery += " AND u.FULLNAME LIKE CONCAT('%', ?, '%')"
 		args = append(args, userName)
 	}
@@ -790,17 +791,17 @@ func (u userManagementStore) DeleteDigiCode(email string, ctx context.Context) e
 		return err
 	}
 
-	defer tx.Rollback()
-
 	sqlQuery := "UPDATE USER  SET RESET_PASSWORD = ? WHERE EMAIL = ?"
 	_, err = tx.ExecContext(ctx, sqlQuery, nil, email)
 	if err != nil {
+		tx.Rollback()
 		log.Errorf("Error deleting class: %v", err)
 		return err
 	}
 
 	err = tx.Commit()
 	if err != nil {
+		tx.Rollback()
 		log.Errorf("Error committing transaction: %v", err)
 		return err
 	}
@@ -862,4 +863,57 @@ func (u userManagementStore) UpdateNewPasswordInfoStore(newPassword string, emai
 	// Log success and return the updated user entity
 	log.Infof("Successfully updated password for user with ID: %d", entities.UserId)
 	return &entities, nil
+}
+
+func (u *userManagementStore) DeleteStudentInCourseStore(rq api_request.DeleteStudentRequest, ctx context.Context) error {
+	log.Infof("delete student in course")
+	tx, err := u.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Errorf("Error starting transaction: %v", err)
+		return err
+	}
+
+	sqlQuery := "DELETE FROM COURSE_MANAGER WHERE COURSE_ID = ? AND STUDENT_ID = ?"
+	_, err = tx.ExecContext(ctx, sqlQuery, rq.CourseId, rq.StudentId)
+	if err != nil {
+		tx.Rollback()
+		log.Errorf("Error deleting class: %v", err)
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		log.Errorf("Error committing transaction: %v", err)
+		return err
+	}
+
+	log.Infof("DELETE STUDENT %s successfully", rq.StudentId)
+	return nil
+}
+
+func (u *userManagementStore) ModifyStudentInformationStore(rq api_request.ModifyStudentRequest, ctx context.Context) error {
+	log.Infof("update student information")
+	tx, err := u.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Errorf("Error starting transaction: %v", err)
+		return err
+	}
+
+	sqlQuery := "UPDATE STUDENT SET STUDENT_NAME = ?, DOB = ?, EMAIL = ?, PHONE_NUMBER = ? WHERE STUDENT_ID = ?"
+	_, err = tx.ExecContext(ctx, sqlQuery, rq.Name, rq.DOB, rq.Email, rq.PhoneNumber, rq.StudentId)
+	if err != nil {
+		tx.Rollback()
+		log.Errorf("Error deleting class: %v", err)
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		log.Errorf("Error committing transaction: %v", err)
+		return err
+	}
+	log.Infof("STORE: success modify student information")
+	return nil
 }

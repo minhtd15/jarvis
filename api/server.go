@@ -162,6 +162,9 @@ func NewRouter(config Config) http.Handler {
 	internalRouter.HandleFunc("/fix-course-information", handleFixCourseInformation).Methods(http.MethodPut)
 	internalRouter.HandleFunc("/note", AddNoteByClassId).Methods(http.MethodPost)
 	internalRouter.HandleFunc("/check-in-history", handleGetCheckInWorkerHistory).Methods(http.MethodGet)
+	internalRouter.HandleFunc("/delete-student", handleDeleteStudent).Methods(http.MethodDelete)
+	internalRouter.HandleFunc("/fix-student-info", handleFixStudentInformation).Methods(http.MethodPut)
+	internalRouter.HandleFunc("/add-user-by-position", handleAddUserByPosition).Methods(http.MethodPost)
 
 	// APIs that does not require token
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()
@@ -183,7 +186,7 @@ func NewRouter(config Config) http.Handler {
 	externalRouter.HandleFunc("/new-password", handleSetNewPassword).Methods(http.MethodPost)
 
 	// Serving static files from the "./static" directory
-	r.PathPrefix("/web/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir("build"))))
+	r.PathPrefix("/web/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir("dist"))))
 
 	// Set up cron job to run sendDailyEmail at 7 AM daily
 	//con := cron.New()

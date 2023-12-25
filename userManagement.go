@@ -54,6 +54,8 @@ type UserService interface {
 	PostNewForgotPasswordCode(email string, ctx context.Context) (*int, error)
 	CheckFitDigitCode(email string, code int, ctx context.Context) (*bool, error)
 	UpdateNewPasswordInfo(newPassword string, email string, ctx context.Context) (*api_response.UserDto, error)
+	DeleteStudentService(rq api_request.DeleteStudentRequest, ctx context.Context) error
+	ModifyStudentInformation(rq api_request.ModifyStudentRequest, ctx context.Context) error
 }
 
 type UserStore interface {
@@ -78,4 +80,6 @@ type UserStore interface {
 	PostNewForgotPasswordCodeStore(email string, digitCode int, ctx context.Context) error
 	CheckFitDigitCodeStore(email string, code int, ctx context.Context) (*bool, error)
 	UpdateNewPasswordInfoStore(newPassword string, email string, ctx context.Context) (*user.UserEntity, error)
+	DeleteStudentInCourseStore(rq api_request.DeleteStudentRequest, ctx context.Context) error
+	ModifyStudentInformationStore(rq api_request.ModifyStudentRequest, ctx context.Context) error
 }

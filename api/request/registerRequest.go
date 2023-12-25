@@ -13,3 +13,6 @@ type NewPasswordRequest struct {
 	Email       string `json:"email"`
 	NewPassword string `json:"newPassword"`
 }
+
+type NewUserAddedByAdmin struct {
+}

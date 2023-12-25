@@ -102,7 +102,8 @@ func handlerSalaryInformation(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 	} else {
 		if userSearchName == "" {
-			userSalaryReport, err := userService.GetSalaryInformation("", salaryRequest.Month, salaryRequest.Year, ctx)
+			userSearchName = "undefined"
+			userSalaryReport, err := userService.GetSalaryInformation(userSearchName, salaryRequest.Month, salaryRequest.Year, ctx)
 			if err != nil {
 				log.WithError(err).Warningf("Error getting salary information from Salary view for leader %s", userName)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -735,9 +736,14 @@ func handleCheckInAttendanceClass(w http.ResponseWriter, r *http.Request) {
 	logger := GetLoggerWithContext(ctx).WithField("METHOD POST", "Check in worker's attendance to calculate salary")
 	logger.Infof("this API is used to delete class via classId")
 
-	userId, ok := r.Context().Value("user_id").(string)
+	role, ok := r.Context().Value("role").(string)
 	if !ok {
 		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
+		return
+	}
+
+	if role == "user" {
+		http.Error(w, "You are not allowed", 252001)
 		return
 	}
 
@@ -759,7 +765,7 @@ func handleCheckInAttendanceClass(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = userService.CheckInWorkerAttendanceService(rq, userId, ctx)
+	err = userService.CheckInWorkerAttendanceService(rq, rq.UserId, ctx)
 	if err != nil {
 		log.WithError(err).Warningf("Error check in attendance course to update attendance worker")
 		http.Error(w, "Error internal", 252001)
@@ -773,4 +779,159 @@ func handleCheckInAttendanceClass(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
+}
+
+func handleDeleteStudent(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD DELETE", "handle delete student in course")
+	logger.Infof("this API is used to delete class via classId")
+
+	role, ok := r.Context().Value("role").(string)
+	if !ok {
+		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
+		return
+	}
+
+	if role == "user" {
+		response := map[string]interface{}{
+			"message": "You are not allowed to this function",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	var rq api_request.DeleteStudentRequest
+	err = json.Unmarshal(bodyBytes, &rq)
+	if err != nil {
+		log.WithError(err).Warningf("Error marshalling body from request update attendance worker")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	err = userService.DeleteStudentService(rq, ctx)
+	if err != nil {
+		log.WithError(err).Warningf("Error delete student service %s", err)
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful delete student in course",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func handleFixStudentInformation(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD PUT", "handle modify student information")
+	logger.Infof("this API is used to modify student information")
+
+	role, ok := r.Context().Value("role").(string)
+	if !ok {
+		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
+		return
+	}
+
+	if role == "user" {
+		response := map[string]interface{}{
+			"message": "You are not allowed to this function",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	var rq api_request.ModifyStudentRequest
+	err = json.Unmarshal(bodyBytes, &rq)
+	if err != nil {
+		log.WithError(err).Warningf("Error marshalling body from request update attendance worker")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	err = userService.ModifyStudentInformation(rq, ctx)
+	if err != nil {
+		log.WithError(err).Warningf("Error update student information service %s", err)
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful delete student in course",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func handleAddUserByPosition(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handleRetryUserAccount")
+	logger.Infof("Handle user account")
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	var registerRequest api_request.RegisterRequest
+	err = json.Unmarshal(bodyBytes, &registerRequest)
+	if err != nil {
+		log.WithError(err).Warningf("Error when unmarshaling data from request")
+		http.Error(w, "Status internal Request", http.StatusInternalServerError) // Return a internal server error
+		return
+	}
+
+	// check whether the user exists in database
+	userExistence, err := userService.GetByUserName(registerRequest.UserName, registerRequest.Email, "", ctx)
+	if err != nil {
+		log.WithError(err).Warningf("Error when get user data by username")
+		http.Error(w, "Status internal Request", http.StatusInternalServerError)
+		return
+	}
+
+	if userExistence.UserName == registerRequest.UserName || userExistence.Email == registerRequest.Email {
+		log.Infof("UserName/Email existed")
+
+		// Người dùng đã tồn tại, trả về một thông báo JSON cho phía frontend
+		response := map[string]string{
+			"message": "User/Email already exists",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict) // HTTP 409 Conflict status code
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
 }

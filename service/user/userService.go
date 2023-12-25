@@ -521,3 +521,12 @@ func (u userService) UpdateNewPasswordInfo(newPassword string, email string, ctx
 
 	return &rs, err
 }
+
+func (u userService) DeleteStudentService(rq api_request.DeleteStudentRequest, ctx context.Context) error {
+	log.Infof("Delete Student Service")
+	return u.userStore.DeleteStudentInCourseStore(rq, ctx)
+}
+
+func (u userService) ModifyStudentInformation(rq api_request.ModifyStudentRequest, ctx context.Context) error {
+	return u.userStore.ModifyStudentInformationStore(rq, ctx)
+}
