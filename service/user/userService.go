@@ -530,3 +530,26 @@ func (u userService) DeleteStudentService(rq api_request.DeleteStudentRequest, c
 func (u userService) ModifyStudentInformation(rq api_request.ModifyStudentRequest, ctx context.Context) error {
 	return u.userStore.ModifyStudentInformationStore(rq, ctx)
 }
+
+func (u userService) InsertNewUserByJobPosition(rq api_request.NewUserAddedByAdmin, ctx context.Context) error {
+	log.Infof("Start to add new user by job position by admin %v", rq)
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("procast@123"), 12)
+	if err != nil {
+		log.WithError(err).Errorf("Error encrypt password")
+		return err
+	}
+	entity := user.UserEntity{
+		UserId:       u.GenerateUserId(),
+		UserName:     rq.UserName,
+		Email:        rq.Email,
+		Role:         "user",
+		DOB:          rq.DOB,
+		StartingDate: time.Now().Format("2006-01-02"),
+		JobPosition:  rq.JobPosition,
+		Password:     string(hashedPassword),
+		Gender:       rq.Gender,
+		FullName:     rq.FullName,
+	}
+	return u.userStore.InsertNewUserStore(entity, ctx)
+}

@@ -904,8 +904,8 @@ func handleAddUserByPosition(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body)
 	defer r.Body.Close()
 
-	var registerRequest api_request.RegisterRequest
-	err = json.Unmarshal(bodyBytes, &registerRequest)
+	var newUserRequest api_request.NewUserAddedByAdmin
+	err = json.Unmarshal(bodyBytes, &newUserRequest)
 	if err != nil {
 		log.WithError(err).Warningf("Error when unmarshaling data from request")
 		http.Error(w, "Status internal Request", http.StatusInternalServerError) // Return a internal server error
@@ -913,14 +913,14 @@ func handleAddUserByPosition(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check whether the user exists in database
-	userExistence, err := userService.GetByUserName(registerRequest.UserName, registerRequest.Email, "", ctx)
+	userExistence, err := userService.GetByUserName(newUserRequest.UserName, newUserRequest.Email, "", ctx)
 	if err != nil {
 		log.WithError(err).Warningf("Error when get user data by username")
 		http.Error(w, "Status internal Request", http.StatusInternalServerError)
 		return
 	}
 
-	if userExistence.UserName == registerRequest.UserName || userExistence.Email == registerRequest.Email {
+	if userExistence.UserName == newUserRequest.UserName || userExistence.Email == newUserRequest.Email {
 		log.Infof("UserName/Email existed")
 
 		// Người dùng đã tồn tại, trả về một thông báo JSON cho phía frontend
@@ -934,4 +934,10 @@ func handleAddUserByPosition(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = userService.InsertNewUserByJobPosition(newUserRequest, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error insert new user")
+		http.Error(w, "Status internal request", http.StatusInternalServerError)
+		return
+	}
 }

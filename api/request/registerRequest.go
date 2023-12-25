@@ -15,4 +15,10 @@ type NewPasswordRequest struct {
 }
 
 type NewUserAddedByAdmin struct {
+	Email       string `json:"email"`
+	UserName    string `json:"user_name"`
+	DOB         string `json:"dob"`
+	Gender      string `json:"gender"`
+	FullName    string `json:"fullName"`
+	JobPosition string `json:"job_position"`
 }

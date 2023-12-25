@@ -191,11 +191,28 @@ func (c classService) GetCourseInformationByClassName(request api_request.Course
 		courseStatus = "ACTIVE"
 	}
 
+	layout := "15:04:00"
+
+	// Parse the string into a time.Time value
+	startTime, err := time.Parse(layout, rs.StartTime.String)
+	if err != nil {
+		fmt.Println("Error parsing time:", err)
+		return nil, err
+	}
+
+	endTime, err := time.Parse(layout, rs.EndTime.String)
+	if err != nil {
+		fmt.Println("Error parsing time:", err)
+		return nil, err
+	}
+
 	return &api_response.CourseInfoResponse{
 		CourseId:      int64(rs.CourseId),
 		CourseName:    rs.CourseName,
 		MainTeacher:   rs.MainTeacher,
 		Room:          int64(rs.Room),
+		StartTime:     startTime,
+		EndTime:       endTime,
 		StartDate:     startDate.Format("2006-01-02"),
 		EndDate:       endDate.Format("2006-01-02"),
 		StudyDays:     rs.StudyDays,

@@ -56,6 +56,7 @@ type UserService interface {
 	UpdateNewPasswordInfo(newPassword string, email string, ctx context.Context) (*api_response.UserDto, error)
 	DeleteStudentService(rq api_request.DeleteStudentRequest, ctx context.Context) error
 	ModifyStudentInformation(rq api_request.ModifyStudentRequest, ctx context.Context) error
+	InsertNewUserByJobPosition(rq api_request.NewUserAddedByAdmin, ctx context.Context) error
 }
 
 type UserStore interface {
