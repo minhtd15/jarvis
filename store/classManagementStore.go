@@ -85,11 +85,20 @@ func (c *classManagementStore) InsertNewCourseStore(entity course_class.CourseEn
 	}
 	defer stmt.Close()
 
-	for _, v := range schedule {
-		rs, err := stmt.Exec(courseID, rq.StartTime, rq.EndTime, v, entity.Room, "1")
-		if err != nil {
-			log.WithError(err).Errorf("Failed to insert class into the database")
-			return err
+	for i := 0; i < len(schedule); i++ {
+		var rs sql.Result
+		if i == len(schedule)-1 {
+			rs, err = stmt.Exec(courseID, rq.StartTime, rq.EndTime, schedule[i], entity.Room, "3")
+			if err != nil {
+				log.WithError(err).Errorf("Failed to insert class into the database")
+				return err
+			}
+		} else {
+			rs, err = stmt.Exec(courseID, rq.StartTime, rq.EndTime, schedule[i], entity.Room, "1")
+			if err != nil {
+				log.WithError(err).Errorf("Failed to insert class into the database")
+				return err
+			}
 		}
 
 		id, err := rs.LastInsertId()
