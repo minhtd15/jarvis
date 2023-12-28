@@ -11,6 +11,7 @@ import (
 	"education-website/entity/salary"
 	"education-website/entity/student"
 	"education-website/entity/user"
+	"fmt"
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -684,11 +685,24 @@ func (u *userManagementStore) CheckInWorkerAttendanceStore(rq api_request.CheckI
 		return err
 	}
 
-	currentTime := time.Now()
+	location, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		fmt.Println("Error loading timezone:", err)
+		return err
+	}
+
+	// Get the current time in the specified timezone
+	currentTime := time.Now().In(location)
+
+	// Format the current time as a string using the desired format
+	timeDb := currentTime.Format("2006-01-02 15:04:05")
+
+	// Print the formatted time
+	fmt.Println("Formatted time for database:", timeDb)
 	// UPDATE IN COURSE TABLE
 	sqlQuery := "INSERT INTO ATTENDANCE_HISTORY (USER_ID, CLASS_NAME, COURSE_TYPE, CHECKIN_TIME, STATUS) VALUES (?, ?, ?, ?, ?)"
 
-	_, err = tx.ExecContext(ctx, sqlQuery, userId, rq.ClassId, rq.CourseTypeId, currentTime, "DONE")
+	_, err = tx.ExecContext(ctx, sqlQuery, userId, rq.ClassId, rq.CourseTypeId, timeDb, "DONE")
 	if err != nil {
 		// Rollback the transaction if an error occurs
 		tx.Rollback()
