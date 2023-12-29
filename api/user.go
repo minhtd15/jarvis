@@ -344,7 +344,7 @@ func handleInsertOneNewStudent(w http.ResponseWriter, r *http.Request) {
 			"message": "You are not allowed to this function",
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(response)
 	}
 
@@ -692,7 +692,7 @@ func handleDeleteSessionByClassIs(w http.ResponseWriter, r *http.Request) {
 			"message": "You are not allowed to this function",
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(response)
 	}
 
@@ -801,7 +801,7 @@ func handleDeleteStudent(w http.ResponseWriter, r *http.Request) {
 			"message": "You are not allowed to this function",
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(response)
 	}
 
@@ -855,7 +855,7 @@ func handleFixStudentInformation(w http.ResponseWriter, r *http.Request) {
 			"message": "You are not allowed to this function",
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(response)
 	}
 
@@ -909,7 +909,7 @@ func handleAddUserByPosition(w http.ResponseWriter, r *http.Request) {
 			"message": "You are not allowed to this function",
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(response)
 	}
 
