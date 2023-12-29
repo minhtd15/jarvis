@@ -898,6 +898,21 @@ func handleAddUserByPosition(w http.ResponseWriter, r *http.Request) {
 	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handleRetryUserAccount")
 	logger.Infof("Handle user account")
 
+	role, ok := r.Context().Value("role").(string)
+	if !ok {
+		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
+		return
+	}
+
+	if role == "user" {
+		response := map[string]interface{}{
+			"message": "You are not allowed to this function",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}
+
 	bodyBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.WithError(err).Warningf("Error when reading from request")
