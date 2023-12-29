@@ -22,4 +22,5 @@ type SubClassEntity struct {
 	Date      sql.NullString `db:"DATE"`
 	Room      string         `db:"ROOM"`
 	TaId      string         `db:"USER_ID"`
+	Note      string         `db:"NOTE"`
 }

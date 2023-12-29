@@ -34,4 +34,5 @@ type SubClassResponse struct {
 	Date      string `json:"date"`
 	Room      string `json:"room"`
 	TaId      string `json:"ta_id"`
+	Note      string `json:"note"`
 }

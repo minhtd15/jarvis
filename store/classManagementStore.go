@@ -367,9 +367,9 @@ func (c *classManagementStore) AddNoteStore(noteRequest api_request.AddNoteReque
 	}
 
 	// UPDATE IN COURSE TABLE
-	sqlQuery := "UPDATE CLASS SET START_TIME = ?, END_TIME = ?, DATE = ?, NOTE = ? WHERE CLASS_ID = ?"
+	sqlQuery := "UPDATE CLASS SET START_TIME = ?, END_TIME = ?, DATE = ?, ROOM = ?, NOTE = ? WHERE CLASS_ID = ?"
 
-	_, err = tx.ExecContext(ctx, sqlQuery, noteRequest.StartTime, noteRequest.EndTime, noteRequest.Date, noteRequest.Note, noteRequest.ClassId)
+	_, err = tx.ExecContext(ctx, sqlQuery, noteRequest.StartTime, noteRequest.EndTime, noteRequest.Date, noteRequest.Room, noteRequest.Note, noteRequest.ClassId)
 	if err != nil {
 		// Rollback the transaction if an error occurs
 		tx.Rollback()
@@ -504,7 +504,7 @@ func (c *classManagementStore) AddSubClassStore(rq api_request.NewSubClassReques
 
 func (c *classManagementStore) GetSubClassByCourseIdStore(courseId string, ctx context.Context) ([]course_class.SubClassEntity, error) {
 	log.Infof("Get all sub class detail for course: %s", courseId)
-	sqlQuery := "SELECT C.CLASS_ID, C.START_TIME, C.END_TIME, C.DATE, C.ROOM, CM.USER_ID " +
+	sqlQuery := "SELECT C.CLASS_ID, C.START_TIME, C.END_TIME, C.DATE, C.ROOM, C.NOTE, CM.USER_ID " +
 		"FROM CLASS C JOIN CLASS_MANAGER CM ON C.CLASS_ID = CM.COURSE_ID " +
 		"WHERE C.COURSE_ID = ? AND C.TYPE_CLASS = 3"
 
