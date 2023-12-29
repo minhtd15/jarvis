@@ -155,8 +155,9 @@ func handleModifySalaryConfiguration(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(response)
+		return
 	}
 
 	bodyBytes, err := ioutil.ReadAll(r.Body)
