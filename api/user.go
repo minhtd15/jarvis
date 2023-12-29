@@ -510,7 +510,7 @@ func handleDeleteCourse(w http.ResponseWriter, r *http.Request) {
 			"message": "You are not allowed to this function",
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(response)
 	}
 
