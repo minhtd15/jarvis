@@ -35,3 +35,16 @@ type AddNoteRequest struct {
 	Note      string   `json:"note"`
 	Check     bool     `json:"check"`
 }
+
+type NewSubClassRequest struct {
+	CourseId  int    `json:"course_id"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+	Date      string `json:"date"`
+	Room      int    `json:"room"`
+	TaId      string `json:"ta_id"`
+}
+
+type DeleteSubClassRequest struct {
+	ClassId string `json:"class_id"`
+}

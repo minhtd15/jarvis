@@ -88,7 +88,7 @@ func (c *classManagementStore) InsertNewCourseStore(entity course_class.CourseEn
 	for i := 0; i < len(schedule); i++ {
 		var rs sql.Result
 		if i == len(schedule)-1 {
-			rs, err = stmt.Exec(courseID, rq.StartTime, rq.EndTime, schedule[i], entity.Room, "3")
+			rs, err = stmt.Exec(courseID, rq.StartTime, rq.EndTime, schedule[i], entity.Room, "2")
 			if err != nil {
 				log.WithError(err).Errorf("Failed to insert class into the database")
 				return err
@@ -458,4 +458,96 @@ func (c *classManagementStore) GetCheckInHistoryByCourseIdStore(courseId string,
 		return nil, err
 	}
 	return entities, nil
+}
+
+func (c *classManagementStore) AddSubClassStore(rq api_request.NewSubClassRequest, ctx context.Context) error {
+	log.Infof("Start to add new sub class for course %s", rq.CourseId)
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Errorf("Error starting transaction: %v", err)
+		return err
+	}
+
+	sqlQuery := "INSERT INTO CLASS (COURSE_ID, START_TIME, END_TIME, DATE, ROOM, TYPE_CLASS) VALUES (?, ?, ?, ?, ?, ?)"
+	result, err := tx.ExecContext(ctx, sqlQuery, rq.CourseId, rq.StartTime, rq.EndTime, rq.Date, rq.Room, "3")
+	if err != nil {
+		tx.Rollback()
+		log.Errorf("Error deleting class: %v", err)
+		return err
+	}
+
+	lastInsertID, err := result.LastInsertId()
+	if err != nil {
+		tx.Rollback()
+		log.Errorf("Error getting last insert ID: %v", err)
+		return err
+	}
+
+	sqlQuery = "INSERT INTO CLASS_MANAGER (USER_ID, COURSE_ID, CLASS_ROLE) VALUES (?, ?, ?)"
+	_, err = tx.ExecContext(ctx, sqlQuery, rq.TaId, lastInsertID, "TA")
+	if err != nil {
+		tx.Rollback()
+		log.Errorf("Error deleting class: %v", err)
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		log.Errorf("Error committing transaction: %v", err)
+		return err
+	}
+
+	log.Infof("Successfully insert sub class to course %s", rq.CourseId)
+	return nil
+}
+
+func (c *classManagementStore) GetSubClassByCourseIdStore(courseId string, ctx context.Context) ([]course_class.SubClassEntity, error) {
+	log.Infof("Get all sub class detail for course: %s", courseId)
+	sqlQuery := "SELECT C.CLASS_ID, C.START_TIME, C.END_TIME, C.DATE, C.ROOM, CM.USER_ID " +
+		"FROM CLASS C JOIN CLASS_MANAGER CM ON C.CLASS_ID = CM.COURSE_ID " +
+		"WHERE C.COURSE_ID = ? AND C.TYPE_CLASS = 3"
+
+	var rs []course_class.SubClassEntity
+	err := c.db.SelectContext(ctx, &rs, sqlQuery, courseId)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to get sub class for course %s from the database", courseId)
+		return nil, err
+	}
+	return rs, nil
+}
+
+func (c *classManagementStore) DeleteSubClassStore(rq string, ctx context.Context) error {
+	log.Infof("Start to delete sub class %s", rq)
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Errorf("Error starting transaction: %v", err)
+		return err
+	}
+
+	sqlQuery := "DELETE FROM CLASS WHERE CLASS_ID = ?"
+	_, err = tx.ExecContext(ctx, sqlQuery, rq)
+	if err != nil {
+		tx.Rollback()
+		log.Errorf("Error deleting class: %v", err)
+		return err
+	}
+
+	sqlQuery = "DELETE FROM CLASS_MANAGER WHERE COURSE_ID = ?"
+	_, err = tx.ExecContext(ctx, sqlQuery, rq)
+	if err != nil {
+		tx.Rollback()
+		log.Errorf("Error deleting class: %v", err)
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		log.Errorf("Error committing transaction: %v", err)
+		return err
+	}
+
+	log.Infof("Successfully delete sub class %s", rq)
+	return nil
 }

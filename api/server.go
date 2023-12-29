@@ -165,6 +165,8 @@ func NewRouter(config Config) http.Handler {
 	internalRouter.HandleFunc("/delete-student", handleDeleteStudent).Methods(http.MethodDelete)
 	internalRouter.HandleFunc("/fix-student-info", handleFixStudentInformation).Methods(http.MethodPut)
 	internalRouter.HandleFunc("/add-user-by-position", handleAddUserByPosition).Methods(http.MethodPost)
+	internalRouter.HandleFunc("/add-sub-class", handlePostSubClass).Methods(http.MethodPost)
+	internalRouter.HandleFunc("/delete-sub-class", handleDeleteSubClass).Methods(http.MethodDelete)
 
 	// APIs that does not require token
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()
@@ -184,6 +186,7 @@ func NewRouter(config Config) http.Handler {
 	externalRouter.HandleFunc("/forgot-password", handleSendEmailForgotPassword).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/send-digit", handleCheckDigitCodeForgotPassword).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/new-password", handleSetNewPassword).Methods(http.MethodPost)
+	externalRouter.HandleFunc("/get-sub-class", handleGetSubClass).Methods(http.MethodGet)
 
 	// Serving static files from the "./static" directory
 	r.PathPrefix("/web/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir("dist"))))
@@ -194,7 +197,7 @@ func NewRouter(config Config) http.Handler {
 	//con.Start()
 
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"http://localhost:3000"},
+		AllowedOrigins: []string{"http://localhost:8081"},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
 		AllowedHeaders: []string{"*"},
 	})

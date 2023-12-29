@@ -26,3 +26,12 @@ type ClassResponse struct {
 	Note      string   `json:"note"`
 	TaList    []string `json:"assistant"`
 }
+
+type SubClassResponse struct {
+	ClassId   string `json:"class_id"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+	Date      string `json:"date"`
+	Room      string `json:"room"`
+	TaId      string `json:"ta_id"`
+}

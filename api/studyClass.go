@@ -433,3 +433,134 @@ func handleGetCheckInWorkerHistory(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
+
+func handlePostSubClass(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD POST", "add sub class")
+	logger.Infof("this API is used to add sub class to course")
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	role, ok := r.Context().Value("role").(string)
+	if !ok {
+		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
+		return
+	}
+
+	if role == "user" {
+		response := map[string]interface{}{
+			"message": "You are not allowed to access to this function",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(response)
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	var subClassRq api_request.NewSubClassRequest
+	err = json.Unmarshal(bodyBytes, &subClassRq)
+	if err != nil {
+		log.WithError(err).Warningf("Error when unmarshaling data from request")
+		http.Error(w, "Status bad Request", http.StatusInternalServerError)
+		return
+	}
+
+	err = classService.AddSubClassService(subClassRq, ctx)
+	if err != nil {
+		log.WithError(err).Warningf("Error add new sub class")
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful add sub class",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func handleGetSubClass(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "get all sub class for course")
+	logger.Infof("this API is used to add sub class to course")
+
+	keys := r.URL.Query()
+	courseId := keys.Get("courseId")
+
+	rs, err := classService.GetSubClassByCourseId(courseId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to get sub class for course %s", courseId)
+		http.Error(w, "Unable to get sub class by course Id", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful getting sub class for course",
+		"data":    rs,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func handleDeleteSubClass(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD DELETE", "delete sub class")
+	logger.Infof("this API is used to delete sub class to course")
+
+	role, ok := r.Context().Value("role").(string)
+	if !ok {
+		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
+		return
+	}
+
+	if role == "user" {
+		response := map[string]interface{}{
+			"message": "You are not allowed to access to this function",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(response)
+	}
+
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.WithError(err).Warningf("Error when reading from request")
+		http.Error(w, "Invalid format", 252001)
+		return
+	}
+
+	json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	var deleteSubClassRq api_request.DeleteSubClassRequest
+	err = json.Unmarshal(bodyBytes, &deleteSubClassRq)
+	if err != nil {
+		log.WithError(err).Warningf("Error when unmarshaling data from request")
+		http.Error(w, "Status bad Request", http.StatusInternalServerError)
+		return
+	}
+
+	err = classService.DeleteSubClassService(deleteSubClassRq, ctx)
+	if err != nil {
+		log.WithError(err).Warningf("Error delete sub class")
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful delete sub class",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}

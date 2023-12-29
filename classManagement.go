@@ -21,6 +21,9 @@ type ClassService interface {
 	AddNoteService(noteRequest api_request.AddNoteRequest, add []string, delete []string, ctx context.Context) error
 	GetTAListService(classId int, ctx context.Context) ([]string, error)
 	GetCheckInHistoryByCourseId(courseId string, ctx context.Context) ([]api_response.CheckInHistory, error)
+	AddSubClassService(rq api_request.NewSubClassRequest, ctx context.Context) error
+	GetSubClassByCourseId(courseId string, ctx context.Context) ([]api_response.SubClassResponse, error)
+	DeleteSubClassService(rq api_request.DeleteSubClassRequest, ctx context.Context) error
 }
 
 type ClassStore interface {
@@ -37,4 +40,7 @@ type ClassStore interface {
 	AddNoteStore(noteRequest api_request.AddNoteRequest, add []string, delete []string, ctx context.Context) error
 	GetTaListInSessionStore(classId int, ctx context.Context) ([]string, error)
 	GetCheckInHistoryByCourseIdStore(courseId string, ctx context.Context) ([]course_class.CheckInHistoryEntity, error)
+	AddSubClassStore(rq api_request.NewSubClassRequest, ctx context.Context) error
+	GetSubClassByCourseIdStore(courseId string, ctx context.Context) ([]course_class.SubClassEntity, error)
+	DeleteSubClassStore(rq string, ctx context.Context) error
 }

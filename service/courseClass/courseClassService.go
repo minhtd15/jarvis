@@ -399,3 +399,36 @@ func (c classService) GetCheckInHistoryByCourseId(courseId string, ctx context.C
 	}
 	return result, nil
 }
+
+func (c classService) AddSubClassService(rq api_request.NewSubClassRequest, ctx context.Context) error {
+	return c.classStore.AddSubClassStore(rq, ctx)
+}
+
+func (c classService) GetSubClassByCourseId(courseId string, ctx context.Context) ([]api_response.SubClassResponse, error) {
+	log.Infof("Start to get sub class by course id")
+
+	rs, err := c.classStore.GetSubClassByCourseIdStore(courseId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error getting sub class by course id %s", courseId)
+		return nil, err
+	}
+
+	var result []api_response.SubClassResponse
+	for _, v := range rs {
+		log.Infof("Sub class: %v", v)
+		tmp := api_response.SubClassResponse{
+			ClassId:   v.ClassId,
+			StartTime: v.StartTime,
+			EndTime:   v.EndTime,
+			Date:      v.Date.String,
+			Room:      v.Room,
+			TaId:      v.TaId,
+		}
+		result = append(result, tmp)
+	}
+	return result, nil
+}
+
+func (c classService) DeleteSubClassService(rq api_request.DeleteSubClassRequest, ctx context.Context) error {
+	return c.classStore.DeleteSubClassStore(rq.ClassId, ctx)
+}
