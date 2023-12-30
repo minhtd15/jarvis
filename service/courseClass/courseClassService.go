@@ -423,7 +423,7 @@ func (c classService) GetSubClassByCourseId(courseId string, ctx context.Context
 			Date:      v.Date.String,
 			Room:      v.Room,
 			TaId:      v.TaId,
-			Note:      v.Note,
+			Note:      v.Note.String,
 		}
 		result = append(result, tmp)
 	}

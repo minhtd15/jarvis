@@ -1,6 +1,8 @@
 package api_response
 
-import "time"
+import (
+	"time"
+)
 
 type CourseInfoResponse struct {
 	CourseId      int64     `json:"course_id"`
