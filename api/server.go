@@ -189,7 +189,7 @@ func NewRouter(config Config) http.Handler {
 	externalRouter.HandleFunc("/get-sub-class", handleGetSubClass).Methods(http.MethodGet)
 
 	// Serving static files from the "./static" directory
-	r.PathPrefix("/web/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir("dist"))))
+	r.PathPrefix("/web/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir("dist1"))))
 
 	// Set up cron job to run sendDailyEmail at 7 AM daily
 	//con := cron.New()

@@ -456,10 +456,10 @@ func handlePostSubClass(w http.ResponseWriter, r *http.Request) {
 		response := map[string]interface{}{
 			"message": "You are not allowed to access to this function",
 		}
-
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusForbidden)
+		http.Error(w, "Status bad Request", http.StatusForbidden)
 		json.NewEncoder(w).Encode(response)
+		return
 	}
 
 	json.NewDecoder(r.Body)
