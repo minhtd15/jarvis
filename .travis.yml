@@ -10,6 +10,7 @@ script:
 before_install:
   - echo "minhtom1510" | docker login -u "minhtd5" --password-stdin
   - docker-compose up
+  - go run app/service/main.go
 
 deploy:
   provider: script
