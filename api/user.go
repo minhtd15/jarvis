@@ -593,6 +593,8 @@ func getStudentsByCourse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = redisClient.Save("alo", "userRequest.Email", ctx)
+
 	response := map[string]interface{}{
 		"message": "Successful get student list for course",
 		"data":    studentList,

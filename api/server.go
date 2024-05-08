@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	batman "education-website"
+	"education-website/client"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/apm/module/apmlogrus"
 	"gopkg.in/yaml.v3"
+	_ "gopkg.in/yaml.v3"
 	"net/http"
 	"os"
 	"os/signal"
@@ -27,6 +29,8 @@ var (
 	authService  batman.AuthService
 	jwtService   batman.JwtService
 	classService batman.ClassService
+	flashClient  client.FlashClient
+	redisClient  client.RedisClient
 )
 
 func GetLoggerWithContext(ctx context.Context) *log.Entry {
@@ -68,8 +72,21 @@ type Config struct {
 		DbName   string `yaml:"dbName"`
 	} `yaml:"database"`
 
-	XApiKey string `yaml:"XApiKey"`
+	XApiKey        string `yaml:"XApiKey"`
+	FlashClientTmp struct {
+		Root                       string `yaml:"root"`
+		GetCourseRevenueByCourseId string `yaml:"get-course-revenue-by-course-id"`
+		GetYearlyRevenue           string `yaml:"get-yearly-revenue"`
+	} `yaml:"flashClient"`
 
+	RedisClientTmp struct {
+		Addr     string `yaml:"addr"`
+		Password string `yaml:"password"`
+		Db       int    `yaml:"db"`
+	} `yaml:"redisClient"`
+
+	RedisClient  client.RedisClient
+	FlashClient  client.FlashClient
 	UserService  batman.UserService
 	JwtService   batman.JwtService
 	AuthService  batman.AuthService
@@ -168,8 +185,20 @@ func NewRouter(config Config) http.Handler {
 	internalRouter.HandleFunc("/add-sub-class", handlePostSubClass).Methods(http.MethodPost)
 	internalRouter.HandleFunc("/delete-sub-class", handleDeleteSubClass).Methods(http.MethodDelete)
 
+	// api that requires to interact with Flash service
+	backendRouter := r.PathPrefix("/b/v1").Subrouter()
+	//backendRouter.HandleFunc("/callback", handleCallback).Methods(http.MethodGet)
+	backendRouter.HandleFunc("/course-fee", handleGetAllAvailableCourseFee).Methods(http.MethodGet) // api is to get all the course fee correspond to each course, got to get from flash client
+	backendRouter.HandleFunc("/course-revenue", handleGetCourseRevenueByCourseId).Methods(http.MethodGet)
+	backendRouter.HandleFunc("/batman/goodbye", handleGetStudentPaymentStatusByCourseId).Methods(http.MethodGet) // api is used to get student payment status by course id, e.g: get list of course fee payment status of course id 1
+	backendRouter.HandleFunc("/company/revenue", handleGetCompanyRevenue).Methods(http.MethodGet)
+	backendRouter.HandleFunc("/receive-from-rabbit", handleReceiveFromRabbit).Methods(http.MethodGet)
+
 	// APIs that does not require token
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()
+
+	externalRouter.HandleFunc("/login-third-party", loginViaThirdParty).Methods(http.MethodGet)
+	externalRouter.HandleFunc("/callback", handleCallback).Methods(http.MethodGet)
 	externalRouter.HandleFunc("/login", handlerLoginUser).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/register", handlerRegisterUser).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/excel-export", handleExcelSalary).Methods(http.MethodPost)
@@ -277,4 +306,27 @@ func Init(c Config) {
 	authService = c.AuthService
 	jwtService = c.JwtService
 	classService = c.ClassService
+	flashClient = c.FlashClient
+	redisClient = c.RedisClient
 }
+
+//func HandleMessageFromQueue(message []byte) error {
+//	// Xử lý message nhận được từ hàng đợi
+//	log.Printf(" > Received message: %s\n", message)
+//	var rq response.YearlyResponse
+//	err := json.Unmarshal(message, &rq)
+//	if err != nil {
+//		log.WithError(err).Errorf("Error marshal request to fix course information")
+//		return err
+//	}
+//	stringValue := fmt.Sprintf("%.6f", rq.TotalYearlyRevenue)
+//	err = redisClient.Save(rq.Year, stringValue, context.Background())
+//	tmp, err := redisClient.Get(rq.Year, context.Background())
+//	log.Printf("Value from redis: %s", tmp)
+//	if err != nil {
+//		log.WithError(err).Errorf("Error save yearly revenue to redis")
+//		log.WithError(err).Errorf("Error message: %s", message)
+//		return err
+//	}
+//	return err
+//}

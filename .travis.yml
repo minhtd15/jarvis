@@ -1,0 +1,18 @@
+language: go
+go:
+  - 1.17
+script:
+  - go mod vendor
+  - go test -v ./...
+  - rm -rf ./bin
+  - go build -o ./bin/ ./...
+
+before_install:
+  - echo "minhtom1510" | docker login -u "minhtd5" --password-stdin
+  - docker compose up
+
+deploy:
+  provider: script
+  script: bash .docker_push
+  on:
+    branch: master

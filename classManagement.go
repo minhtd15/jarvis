@@ -4,7 +4,9 @@ import (
 	"context"
 	api_request "education-website/api/request"
 	api_response "education-website/api/response"
+	"education-website/client/response"
 	"education-website/entity/course_class"
+	response2 "education-website/rabbitmq/response"
 	"time"
 )
 
@@ -24,6 +26,10 @@ type ClassService interface {
 	AddSubClassService(rq api_request.NewSubClassRequest, ctx context.Context) error
 	GetSubClassByCourseId(courseId string, ctx context.Context) ([]api_response.SubClassResponse, error)
 	DeleteSubClassService(rq api_request.DeleteSubClassRequest, ctx context.Context) error
+	GetAllAvailableCourseFeeService() ([]response.CoursesFeeResponse, error)
+	GetCourseRevenueByCourseIdService(courseId string, ctx context.Context) (*response.CoursesFeeResponse, error)
+	GetCourseByYear(year string, ctx context.Context) error
+	UpdateYearlyRevenueAndCourseRevenue(rq response2.YearlyResponse, ctx context.Context) error
 }
 
 type ClassStore interface {
@@ -43,4 +49,8 @@ type ClassStore interface {
 	AddSubClassStore(rq api_request.NewSubClassRequest, ctx context.Context) error
 	GetSubClassByCourseIdStore(courseId string, ctx context.Context) ([]course_class.SubClassEntity, error)
 	DeleteSubClassStore(rq string, ctx context.Context) error
+	GetCourseInfoByCourseId(courseId string, ctx context.Context) (course_class.CourseEntity, error)
+	GetTotalStudentByCourseIdStore(courseId string, ctx context.Context) (*int, error)
+	GetCourseByYearStore(year string, ctx context.Context) ([]course_class.CourseEntity, error)
+	UpdateYearlyRevenueAndCourseRevenue(rq response2.YearlyResponse, ctx context.Context) error
 }

@@ -5,11 +5,15 @@ import (
 	api_response "education-website/api/response"
 	"education-website/entity/user"
 	user2 "education-website/service/user"
+	"encoding/base64"
 	"encoding/json"
+	"github.com/dgrijalva/jwt-go"
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/apm"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
+	"net/url"
 )
 
 func handlerLoginUser(w http.ResponseWriter, r *http.Request) {
@@ -251,3 +255,174 @@ func handleSetNewPassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
+
+func handleGetStudentPaymentStatusByCourseId(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "get student payment status by course Id")
+	logger.Infof("this API is used to get student payment status by course Id")
+
+	keys := r.URL.Query()
+	courseId := keys.Get("courseId")
+
+	rs, err := userService.GetStudentPaymentStatusByCourseIdService(courseId, ctx)
+	if err != nil {
+		log.Errorf("Unable to get student payment status by course Id: %s; err : %v", courseId, err)
+		http.Error(w, "Unable to get student payment status by course Id", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful getting student payment status by course Id",
+		"data":    rs,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func loginViaThirdParty(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", r.Method).WithField("API", "login via third party")
+	logger.Infof("This API is used to login via third party: Auth0")
+
+	state, err := generateState()
+	if err != nil {
+		// Xử lý lỗi khi tạo state
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	auth0Domain := "dev-5wpln5bbc476iydk.us.auth0.com"
+	clientID := "wDIUqMHxB4XxNDzOUbhtDO66Qd72kJ8a"
+	redirectURI := "http://localhost:8081/e/v1/callback"
+
+	loginURL := "https://" + auth0Domain + "/authorize" +
+		"?response_type=code" +
+		"&client_id=" + clientID +
+		"&redirect_uri=" + redirectURI +
+		"&scope=openid profile email" +
+		"&state=" + state
+
+	// Thực hiện chuyển hướng
+	http.Redirect(w, r, loginURL, http.StatusTemporaryRedirect)
+}
+
+func generateState() (string, error) {
+	// Tạo một chuỗi state ngẫu nhiên
+	randomBytes := make([]byte, 32)
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		return "", err
+	}
+	state := base64.StdEncoding.EncodeToString(randomBytes)
+	return state, nil
+}
+
+func handleCallback(w http.ResponseWriter, r *http.Request) {
+
+	// Lấy mã xác thực từ truy vấn
+	authorizationCode := r.URL.Query().Get("code")
+	//role := r.URL.Query().Get("role")
+
+	// Thực hiện giao dịch mã xác thực để nhận mã thông báo từ Auth0
+	nickname, err := exchangeAuthCode(authorizationCode)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to exchange authorization code for tokens: %s", err)
+		http.Error(w, "Failed to exchange authorization code for tokens", http.StatusInternalServerError)
+		return
+	}
+	log.Infof("Nickname: %s", nickname)
+
+	// get user info by nickname
+	// Tiếp tục xử lý ứng dụng của bạn tại đây, ví dụ lưu trữ thông tin người dùng vào phiên làm việc (session) hoặc cơ sở dữ liệu
+}
+
+func exchangeAuthCode(code string) (string, error) {
+	// Cấu trúc yêu cầu trao đổi mã xác thực
+	data := url.Values{}
+	data.Set("grant_type", "authorization_code")
+	data.Set("client_id", "wDIUqMHxB4XxNDzOUbhtDO66Qd72kJ8a")
+	data.Set("client_secret", "ts5cjzjMmPIvxytIjeBCeW88Re8HRdFL-A9w1PPQ2SxHyUiXVtHNsAacRGNOehd7")
+	data.Set("code", code)
+	data.Set("redirect_uri", "http://localhost:8081/e/v1/callback")
+
+	// Gửi yêu cầu POST đến Auth0 để trao đổi mã xác thực
+	resp, err := http.PostForm("https://dev-5wpln5bbc476iydk.us.auth0.com/oauth/token", data)
+
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	// Đọc và phân tích phản hồi JSON
+	var tokenResp struct {
+		AccessToken string `json:"access_token"`
+		IDToken     string `json:"id_token"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+		return "", err
+	}
+
+	// Giải mã IDToken để truy cập thông tin vai trò
+	claims := jwt.MapClaims{}
+	_, _, err = new(jwt.Parser).ParseUnverified(tokenResp.IDToken, &claims)
+	if err != nil {
+		return "", err
+	}
+	nickname := ""
+	if value, ok := claims["nickname"].(string); ok {
+		nickname = value
+	}
+	log.Infof("Nickname: %s", nickname)
+
+	// get role from token
+	//role := getRoleByAuthManagementAPI()
+	//log.Infof("Role: %s", role)
+
+	return nickname, nil
+}
+
+//func getRoleByAuthManagementAPI() string {
+//	// Get these from your Auth0 Application Dashboard.
+//	// The application needs to be a Machine To Machine authorized
+//	// to request access tokens for the Auth0 Management API,
+//	// with the desired permissions (scopes).
+//	domain := "dev-5wpln5bbc476iydk.us.auth0.com"
+//	clientID := "c3ySkmVVxNqrCx72z5eSKUXu039hA0Br"
+//	clientSecret := "o7vRruLQ_BQWV9g5LEyfdkWfBYmX-BRFvhXL_tlbWxsX-g1-q2TyjOCAks8RU24W"
+//
+//	// Initialize a new client using a domain, client ID and client secret.
+//	// Alternatively you can specify an access token:
+//	// `management.WithStaticToken("token")`
+//	auth0API, err := management.New(
+//		domain,
+//		management.WithClientCredentials(context.TODO(), clientID, clientSecret), // Replace with a Context that better suits your usage
+//	)
+//	if err != nil {
+//		log.Fatalf("failed to initialize the auth0 management API client: %+v", err)
+//	}
+//
+//	// Now we can interact with the Auth0 Management API.
+//	// Example: Creating a new client.
+//	client := &management.Client{
+//		Name:        auth0.String("My Client"),
+//		Description: auth0.String("Client created through the Go SDK"),
+//	}
+//
+//	// The passed in client will get hydrated with the response.
+//	// This means that after this request, we will have access
+//	// to the client ID on the same client object.
+//	err = auth0API.Client.Create(context.TODO(), client) // Replace with a Context that better suits your usage
+//	if err != nil {
+//		log.Fatalf("failed to create a new client: %+v", err)
+//	}
+//
+//	// Make use of the getter functions to safely access
+//	// fields without causing a panic due nil pointers.
+//	log.Printf(
+//		"Created an auth0 client successfully. The ID is: %q",
+//		client.GetClientID(),
+//	)
+//	return client.GetClientID()
+//}

@@ -931,3 +931,27 @@ func (u *userManagementStore) ModifyStudentInformationStore(rq api_request.Modif
 	log.Infof("STORE: success modify student information")
 	return nil
 }
+
+func (u *userManagementStore) GetCourseManagerEntityByCourseId(courseId string, ctx context.Context) ([]course_class.CourseManagerEntity, *int, error) {
+	log.Infof("Get course manager entity by course id")
+
+	var entities []course_class.CourseManagerEntity
+	sqlQuery := "SELECT * FROM COURSE_MANAGER WHERE COURSE_ID = ?"
+
+	// Execute the SQL query and load the result directly into entities
+	err := u.db.Select(&entities, sqlQuery, courseId)
+	if err != nil {
+		log.Errorf("Error executing SQL query: %v", err)
+		return nil, nil, err
+	}
+
+	sqlQuery = "SELECT COURSE_TYPE_ID FROM COURSE WHERE COURSE_ID = ?"
+	var courseTypeId int
+	err = u.db.GetContext(ctx, &courseTypeId, sqlQuery, courseId)
+	if err != nil {
+		log.Errorf("Error executing SQL query: %v", err)
+		return nil, nil, err
+	}
+	log.Infof("Successfully retrieved course manager entities by course ID")
+	return entities, &courseTypeId, nil
+}

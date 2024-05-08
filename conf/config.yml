@@ -10,18 +10,29 @@ server:
 
 XApiKey: "akfndkwfnklswnmljkfnmswljkfnwjlkngfjwenj"
 database:
-  #  host: mysql-242e090-ducminhtong1510-d931.a.aivencloud.com
-  #  port: 21440
-  #  user: avnadmin
-  #  pass: AVNS_PRb_ApuInzGLCBw_ux7
-  #  dbName: defaultdb
-  #  host: localhost
-  #  port: 3306
-  #  user: root
-  #  pass: tongminh1510
-  #  dbName: EDUDBTEST
-  host: 10.96.210.203
-  port: 3306
-  user: fall2324w20g6
-  pass: qwertyuiop
-  dbName: fall2324w20g6_tmp
+    host: mysql-242e090-ducminhtong1510-d931.a.aivencloud.com
+    port: 21440
+    user: avnadmin
+    pass: AVNS_PRb_ApuInzGLCBw_ux7
+    dbName: defaultdb
+#    host: localhost
+#    port: 3306
+#    user: root
+#    pass: tongminh1510
+#    dbName: EDUDBTEST
+#  host: 10.96.210.203
+#  port: 3306
+#  user: fall2324w20g6
+#  pass: qwertyuiop
+#  dbName: fall2324w20g6_tmp
+
+flashClient:
+  root: "http://localhost:8080/"
+  get-course-revenue-by-course-id: "b/v1/flash/hello"
+  get-yearly-revenue: "b/v1/flash/yearly-revenue"
+
+redisClient:
+  addr: "localhost:6379"
+  password: ""
+  db: 0
+

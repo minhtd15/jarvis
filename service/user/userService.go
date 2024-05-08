@@ -5,6 +5,8 @@ import (
 	batman "education-website"
 	api_request "education-website/api/request"
 	api_response "education-website/api/response"
+	"education-website/client"
+	"education-website/client/response"
 	"education-website/entity/student"
 	"education-website/entity/user"
 	"fmt"
@@ -21,16 +23,19 @@ import (
 )
 
 type userService struct {
-	userStore batman.UserStore
+	userStore   batman.UserStore
+	flashClient client.FlashClient
 }
 
 type UserServiceCfg struct {
-	UserStore batman.UserStore
+	UserStore   batman.UserStore
+	FlashClient client.FlashClient
 }
 
 func NewUserService(userServiceCfg UserServiceCfg) batman.UserService {
 	return &userService{
-		userStore: userServiceCfg.UserStore,
+		userStore:   userServiceCfg.UserStore,
+		flashClient: userServiceCfg.FlashClient,
 	}
 }
 
@@ -552,4 +557,31 @@ func (u userService) InsertNewUserByJobPosition(rq api_request.NewUserAddedByAdm
 		FullName:     rq.FullName,
 	}
 	return u.userStore.InsertNewUserStore(entity, ctx)
+}
+
+func (u userService) GetStudentPaymentStatusByCourseIdService(courseId string, ctx context.Context) ([]response.PaymentStatusByCourseIdResponse, error) {
+	log.Infof("Get student payment status by course Id")
+
+	// get all student in course
+	log.Infof("First need to get the student list from course %s", courseId)
+	courseManagerList, courseTypeId, err := u.userStore.GetCourseManagerEntityByCourseId(courseId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to get student list")
+		return nil, err
+	}
+
+	// request to get payment status from flashClient
+	paymentStatusRequest := api_request.PaymentStatusRequest{
+		CourseTypeId:         *courseTypeId,
+		CourseManagerRequest: courseManagerList,
+	}
+
+	// connect to flashClient to get payment status
+	paymentStatus, err := u.flashClient.GetPaymentStatusByCourseId(paymentStatusRequest, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to get payment status from flashClient")
+		return nil, err
+	}
+
+	return paymentStatus, nil
 }

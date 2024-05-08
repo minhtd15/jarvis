@@ -6,7 +6,10 @@ import (
 	batman "education-website"
 	api_request "education-website/api/request"
 	api_response "education-website/api/response"
+	"education-website/client"
+	"education-website/client/response"
 	"education-website/entity/course_class"
+	response2 "education-website/rabbitmq/response"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"strconv"
@@ -15,16 +18,19 @@ import (
 )
 
 type classService struct {
-	classStore batman.ClassStore
+	classStore  batman.ClassStore
+	flashClient client.FlashClient
 }
 
 type ClassServiceCfg struct {
-	ClassStore batman.ClassStore
+	ClassStore  batman.ClassStore
+	FlashClient client.FlashClient
 }
 
 func NewClassService(cfg ClassServiceCfg) batman.ClassService {
 	return classService{
-		classStore: cfg.ClassStore,
+		classStore:  cfg.ClassStore,
+		flashClient: cfg.FlashClient,
 	}
 }
 
@@ -432,4 +438,103 @@ func (c classService) GetSubClassByCourseId(courseId string, ctx context.Context
 
 func (c classService) DeleteSubClassService(rq api_request.DeleteSubClassRequest, ctx context.Context) error {
 	return c.classStore.DeleteSubClassStore(rq.ClassId, ctx)
+}
+
+func (c classService) GetAllAvailableCourseFeeService() ([]response.CoursesFeeResponse, error) {
+	log.Infof("Start to get all available course fee")
+	result, err := c.flashClient.GetAllAvailableCourseFee()
+	if err != nil {
+		log.WithError(err).Errorf("Error getting all available course fee, %s", err)
+		return nil, err
+	}
+	return result, nil
+}
+
+func (c classService) GetCourseRevenueByCourseIdService(courseId string, ctx context.Context) (*response.CoursesFeeResponse, error) {
+	log.Infof("Start to get revenue for course %s", courseId)
+
+	// get courseTypeId from courseId
+	courseType, err := c.classStore.GetCourseInfoByCourseId(courseId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error getting course type for course %s, %s", courseId, err)
+		return nil, err
+	}
+
+	// get all available course fee
+	availableCourseFee, err := c.flashClient.GetAllAvailableCourseFee()
+	if err != nil {
+		log.WithError(err).Errorf("Error getting revenue for course %s, %s", courseId, err)
+		return nil, err
+	}
+
+	var feePerStudent float64
+	for _, v := range availableCourseFee {
+		if v.CourseTypeId == courseType.CourseTypeId {
+			feePerStudent = v.FeePerStudent
+			break
+		}
+	}
+
+	// get total student by courseId
+	totalStudent, err := c.classStore.GetTotalStudentByCourseIdStore(courseId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error getting total student for course %s, %s", courseId, err)
+		return nil, err
+	}
+
+	// calculate revenue
+	revenue := feePerStudent * float64(*totalStudent)
+	log.Infof("Revenue for course %s is %f", courseId, revenue)
+
+	return &response.CoursesFeeResponse{
+		CourseId:      courseId,
+		CourseTypeId:  courseType.CourseTypeId,
+		FeePerStudent: feePerStudent,
+		TotalStudent:  *totalStudent,
+		TotalFee:      revenue,
+	}, nil
+}
+
+func (c classService) GetCompanyRevenueService(year string, ctx context.Context) ([]response.GetCourseRevenueByCourseIdResponse, error) {
+	log.Infof("Start to get revenue for company by month %d", year)
+	//go c.flashClient.GetRevenueByYear(year, ctx)
+	return nil, nil
+}
+
+func (c classService) GetCourseByYear(year string, ctx context.Context) error {
+	log.Infof("Start to get course by year %s", year)
+
+	// get all the courses that have start data within year
+	entities, err := c.classStore.GetCourseByYearStore(year, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error getting course by year %s", year)
+		return err
+	}
+
+	// get total students in each course
+
+	var arr []api_request.GetCourseRevenueByCourseIdRequest
+	for _, v := range entities {
+		tmp := api_request.GetCourseRevenueByCourseIdRequest{
+			CourseId:     v.CourseId,
+			CourseTypeId: v.CourseTypeId,
+			TotalStudent: v.TotalStudent,
+		}
+		arr = append(arr, tmp)
+	}
+
+	// send to flash to request for revenue
+	_, err = c.flashClient.GetRevenueByYear(arr, year, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error getting revenue by year %s",
+			year)
+		return err
+	}
+
+	return err
+}
+
+func (c classService) UpdateYearlyRevenueAndCourseRevenue(rq response2.YearlyResponse, ctx context.Context) error {
+	log.Infof("Start to update yearly revenue and course revenue")
+	return c.classStore.UpdateYearlyRevenueAndCourseRevenue(rq, ctx)
 }

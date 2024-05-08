@@ -48,3 +48,9 @@ type NewSubClassRequest struct {
 type DeleteSubClassRequest struct {
 	ClassId string `json:"class_id"`
 }
+
+type GetCourseRevenueByCourseIdRequest struct {
+	CourseId     int `json:"courseId"`
+	CourseTypeId int `json:"courseTypeId"`
+	TotalStudent int `json:"totalStudent"`
+}

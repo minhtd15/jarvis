@@ -4,6 +4,7 @@ import (
 	"context"
 	api_request "education-website/api/request"
 	api_response "education-website/api/response"
+	"education-website/client/response"
 	"education-website/entity/course_class"
 	"education-website/entity/salary"
 	"education-website/entity/student"
@@ -57,6 +58,7 @@ type UserService interface {
 	DeleteStudentService(rq api_request.DeleteStudentRequest, ctx context.Context) error
 	ModifyStudentInformation(rq api_request.ModifyStudentRequest, ctx context.Context) error
 	InsertNewUserByJobPosition(rq api_request.NewUserAddedByAdmin, ctx context.Context) error
+	GetStudentPaymentStatusByCourseIdService(courseId string, ctx context.Context) ([]response.PaymentStatusByCourseIdResponse, error)
 }
 
 type UserStore interface {
@@ -83,4 +85,5 @@ type UserStore interface {
 	UpdateNewPasswordInfoStore(newPassword string, email string, ctx context.Context) (*user.UserEntity, error)
 	DeleteStudentInCourseStore(rq api_request.DeleteStudentRequest, ctx context.Context) error
 	ModifyStudentInformationStore(rq api_request.ModifyStudentRequest, ctx context.Context) error
+	GetCourseManagerEntityByCourseId(courseId string, ctx context.Context) ([]course_class.CourseManagerEntity, *int, error)
 }

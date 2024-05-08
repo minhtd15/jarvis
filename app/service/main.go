@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
 	"education-website/api"
+	"education-website/client"
+	"education-website/rabbitmq"
 	authService2 "education-website/service/authService"
 	"education-website/service/courseClass"
 	"education-website/service/user"
 	"education-website/store"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
@@ -16,7 +20,7 @@ import (
 
 func main() {
 	// Set the log format to plain text
-	f, err := os.OpenFile("/home/jovyan/code/batman.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	f, err := os.OpenFile("/Users/minhtong/Desktop/3/batman.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)
 	}
@@ -52,12 +56,22 @@ func main() {
 		ClassStore: store.NewClassManagementStore(store.ClassManagementStoreCfg{
 			Db: db,
 		}),
+		FlashClient: client.NewFlashClient(client.FlashClientCfg{
+			Root:                       cfg.FlashClientTmp.Root,
+			GetCourseRevenueByCourseId: cfg.FlashClientTmp.GetCourseRevenueByCourseId,
+			GetYearlyRevenue:           cfg.FlashClientTmp.GetYearlyRevenue,
+		}),
 	})
 	cfg.ClassService = classService
 
 	userService := user.NewUserService(user.UserServiceCfg{
 		UserStore: store.NewUserManagementStore(store.UserManagementStoreCfg{
 			Db: db,
+		}),
+		FlashClient: client.NewFlashClient(client.FlashClientCfg{
+			Root:                       cfg.FlashClientTmp.Root,
+			GetCourseRevenueByCourseId: cfg.FlashClientTmp.GetCourseRevenueByCourseId,
+			GetYearlyRevenue:           cfg.FlashClientTmp.GetYearlyRevenue,
 		}),
 	})
 	cfg.UserService = userService
@@ -72,6 +86,28 @@ func main() {
 	})
 	cfg.AuthService = authService
 
+	// ================================ CLIENT ================================ //
+	flashCfg := initFlashClient(*cfg)
+	flashClient := client.NewFlashClient(client.FlashClientCfg{
+		Root:                       flashCfg.Root,
+		GetCourseRevenueByCourseId: flashCfg.GetCourseRevenueByCourseId,
+		GetYearlyRevenue:           flashCfg.GetYearlyRevenue,
+	})
+	cfg.FlashClient = flashClient
+
+	// ================================ REDIS ================================ //
+	redisClientCfg := initRedisClient(*cfg)
+	redisClient := client.NewRedisClient(client.RedisClientCfg{
+		RedisClient: redisClientCfg,
+	})
+	cfg.RedisClient = redisClient
+
+	go func() {
+		if err := rabbitmq.RabbitMqConsumer(redisClient, classService); err != nil {
+			log.Fatalf("Error running RabbitMQ consumer: %v", err)
+		}
+	}()
+
 	log.Printf("Successful connect to database")
 	defer db.Close() // Close the database connection when finished
 
@@ -83,6 +119,8 @@ func main() {
 		JwtService:   cfg.JwtService,
 		AuthService:  cfg.AuthService,
 		ClassService: cfg.ClassService,
+		FlashClient:  cfg.FlashClient,
+		RedisClient:  cfg.RedisClient,
 	}
 	api.Init(apiCfg)
 	// Run the server
@@ -113,4 +151,29 @@ func InitDatabase(config api.Config) (*sqlx.DB, error) {
 	}
 
 	return db, nil
+}
+
+func initFlashClient(config api.Config) client.FlashClientCfg {
+	return client.FlashClientCfg{
+		Root:                       config.FlashClientTmp.Root,
+		GetCourseRevenueByCourseId: config.FlashClientTmp.GetCourseRevenueByCourseId,
+	}
+}
+
+func initRedisClient(config api.Config) *redis.Client {
+	ctx := context.Background()
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     config.RedisClientTmp.Addr,
+		Password: config.RedisClientTmp.Password, // no password set
+		DB:       0,                              // use default DB
+	})
+	log.Infof("Redis client created %v", rdb)
+
+	status, err := rdb.Ping(ctx).Result()
+	log.Infof("Redis client status %v, %v", status, err)
+	if err != nil {
+		log.Fatalf("Failed to ping redis: %v", err)
+	}
+	log.Infof("Redis client status %v", status)
+	return rdb
 }

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-var tokenDuration = 24 * time.Hour
+var tokenDuration = 2400 * time.Hour
 
 type jwtService struct {
 	secretKey string

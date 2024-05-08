@@ -2,6 +2,7 @@ package api
 
 import (
 	api_request "education-website/api/request"
+	"education-website/rabbitmq"
 	"encoding/json"
 	"fmt"
 	log "github.com/sirupsen/logrus"
@@ -97,6 +98,14 @@ func handleGetAllCourseInformation(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Status internal server error", http.StatusInternalServerError)
 		return
 	}
+
+	err = redisClient.Save("alo", "userRequest.Email", ctx)
+
+	tmp, err := redisClient.Get("alo", ctx)
+	log.Infof("================================== %s ===============================", tmp)
+
+	//test, err := flashClient.GetCourseRevenueByCourseId(strconv.Itoa(123), err)
+	//log.Infof("============================ %s ============================", test)
 
 	response := map[string]interface{}{
 		"message": "Successful getting all course",
@@ -560,6 +569,105 @@ func handleDeleteSubClass(w http.ResponseWriter, r *http.Request) {
 	response := map[string]interface{}{
 		"message": "Successful delete sub class",
 	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func handleGetAllAvailableCourseFee(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "get all available course fee")
+	logger.Infof("this API is used to get all available course fee")
+
+	rs, err := classService.GetAllAvailableCourseFeeService()
+	if err != nil {
+		log.WithError(err).Errorf("Unable to get all available course fee")
+		http.Error(w, "Unable to get all available course fee", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful getting all available course fee",
+		"data":    rs,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func handleGetCourseRevenueByCourseId(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "get course fee by course Id")
+	logger.Infof("this API is used to get course fee by course Id")
+
+	keys := r.URL.Query()
+	courseId := keys.Get("courseId")
+
+	rs, err := classService.GetCourseRevenueByCourseIdService(courseId, ctx)
+	if err != nil {
+		log.Errorf("Unable to get course fee by course Id: %s; err : %v", courseId, err)
+		http.Error(w, "Unable to get course fee by course Id", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful getting course fee by course Id",
+		"data":    rs,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func handleGetCompanyRevenue(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "get company revenue")
+	logger.Infof("this API is used to get company revenue")
+
+	keys := r.URL.Query()
+	year := keys.Get("year")
+
+	// get course that has start date in year
+
+	err := classService.GetCourseByYear(year, ctx)
+	if err != nil {
+		log.Errorf("Unable to get course in year: %s; err : %v", year, err)
+		http.Error(w, "Unable to get course in year", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "Successful getting company revenue in year",
+		"data":    "",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func handleReceiveFromRabbit(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "receive data from rabbit")
+	logger.Infof("this API is used to receive data from rabbit")
+
+	//keys := r.URL.Query()
+	//queue := keys.Get("queueName")
+
+	rabbitmq.RabbitMqConsumer(redisClient, classService)
+	//if err != nil {
+	//	log.Errorf("Unable to receive data from rabbit; err : %v", err)
+	//	http.Error(w, "Unable to receive data from rabbit", http.StatusInternalServerError)
+	//	return
+	//}
+
+	response := map[string]interface{}{
+		"message": "Successful receive data from rabbit",
+		"data":    "",
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)

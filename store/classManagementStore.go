@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	api_request "education-website/api/request"
 	"education-website/entity/course_class"
+	"education-website/rabbitmq/response"
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
 	"time"
@@ -539,6 +540,88 @@ func (c *classManagementStore) DeleteSubClassStore(rq string, ctx context.Contex
 		tx.Rollback()
 		log.Errorf("Error deleting class: %v", err)
 		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		log.Errorf("Error committing transaction: %v", err)
+		return err
+	}
+
+	log.Infof("Successfully delete sub class %s", rq)
+	return nil
+}
+
+func (c *classManagementStore) GetCourseInfoByCourseId(courseId string, ctx context.Context) (course_class.CourseEntity, error) {
+	log.Infof("Get course information by course id %s", courseId)
+
+	entity := course_class.CourseEntity{}
+	sqlQuery := "SELECT * FROM COURSE WHERE COURSE_ID = ?"
+	err := c.db.QueryRowxContext(ctx, sqlQuery, courseId).StructScan(&entity)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to get course information from the database")
+		return entity, err
+	}
+
+	return entity, nil
+}
+
+func (c *classManagementStore) GetTotalStudentByCourseIdStore(courseId string, ctx context.Context) (*int, error) {
+	log.Infof("Get total student by course id %s", courseId)
+
+	var totalStudent int
+	sqlQuery := "SELECT COUNT(*) FROM COURSE_MANAGER WHERE COURSE_ID = ?"
+
+	err := c.db.QueryRowxContext(ctx, sqlQuery, courseId).Scan(&totalStudent)
+	if err != nil {
+		log.WithError(err).Errorf("Cannot find total student for course %s", courseId)
+		return nil, err
+	}
+
+	return &totalStudent, err
+}
+
+func (c *classManagementStore) GetCourseByYearStore(year string, ctx context.Context) ([]course_class.CourseEntity, error) {
+	log.Infof("Get course by year %s", year)
+
+	sqlQuery := "SELECT C.COURSE_ID, C.COURSE_TYPE_ID, COUNT(CM.STUDENT_ID) as TOTAL_STUDENT FROM COURSE C JOIN COURSE_MANAGER CM ON C.COURSE_ID = CM.COURSE_ID WHERE YEAR(C.START_DATE) = ? GROUP BY C.COURSE_ID, C.COURSE_TYPE_ID"
+	var entities []course_class.CourseEntity
+	err := c.db.SelectContext(ctx, &entities, sqlQuery, year)
+
+	if err != nil {
+		log.WithError(err).Errorf("Failed to retrieve courses from the database")
+		return nil, err
+	}
+
+	return entities, nil
+}
+
+func (c *classManagementStore) UpdateYearlyRevenueAndCourseRevenue(rq response.YearlyResponse, ctx context.Context) error {
+	log.Infof("Start to delete sub class %s", rq)
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Errorf("Error starting transaction: %v", err)
+		return err
+	}
+
+	// Save yearly revenue first
+	sqlQuery := "INSERT INTO YEARLY_REVENUE (YEAR, TOTAL_REVENUE) VALUES (?, ?) ON DUPLICATE KEY UPDATE TOTAL_REVENUE = (?)"
+	_, err = tx.ExecContext(ctx, sqlQuery, rq.Year, rq.TotalYearlyRevenue, rq.TotalYearlyRevenue)
+	if err != nil {
+		tx.Rollback()
+		log.Errorf("Error update yearly revenue: %v", err)
+		return err
+	}
+
+	sqlQuery = "INSERT INTO COURSE_REVENUE (COURSE_ID, REVENUE) VALUES (?, ?) ON DUPLICATE KEY UPDATE REVENUE = (?)"
+	for _, v := range rq.CourseFeeResponses {
+		_, err = tx.ExecContext(ctx, sqlQuery, v.CourseID, v.Revenue, v.Revenue)
+		if err != nil {
+			tx.Rollback()
+			log.Errorf("Error update course revenue: %v", err)
+			return err
+		}
 	}
 
 	err = tx.Commit()

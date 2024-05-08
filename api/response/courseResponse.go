@@ -16,3 +16,9 @@ type CheckInHistory struct {
 	CheckInTime string `json:"checkInTime"`
 	Status      string `json:"status"`
 }
+
+type CourseFeeResponse struct {
+	CourseId      string  `json:"courseId"`
+	FeePerStudent float64 `json:"feePerStudent"`
+	TotalFee      float64 `json:"totalFee"`
+}
