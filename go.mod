@@ -3,7 +3,6 @@ module education-website
 go 1.17
 
 require (
-	github.com/auth0/go-auth0 v1.5.0
 	github.com/aws/aws-sdk-go v1.47.9
 	github.com/confluentinc/confluent-kafka-go v1.9.2
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -26,6 +25,7 @@ require (
 require (
 	github.com/PuerkitoBio/rehttp v1.4.0 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
+	github.com/auth0/go-auth0 v1.5.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.22.2 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.5.0 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.23.0 // indirect

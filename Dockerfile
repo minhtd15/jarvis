@@ -1,29 +1,55 @@
-FROM redis:latest
+## Use the RabbitMQ base image
+#FROM golang:1.17.12 AS builder
+#
+#WORKDIR /edu
+#
+## Copy source code into the container
+#COPY . .
+#
+## Compile the application
+##RUN go mod vendor
+#RUN go build -o ./bin/app ./app/service/main.go
+#
+#
+## Use the Alpine base image for the final application
+#FROM alpine:latest
+#
+## Create the directory for the binary
+#RUN mkdir -p /usr/local/bin
+#
+## Copy the binary from the builder stage to the final image
+#COPY --from=builder /edu/bin/app/service /usr/local/bin
+#
+## Set executable permissions on the binary
+#RUN chmod +x /usr/local/bin/service
+#
+## Run the application when the container starts
+#CMD ["/usr/local/bin/service"]
+#
 
-# Sử dụng hình ảnh chứa RabbitMQ
-FROM rabbitmq:latest
+# syntax=docker/dockerfile:1
 
-# Cài đặt Go 1.17
-ENV GOLANG_VERSION 1.17
-RUN wget -O go.tgz "https://golang.org/dl/go${GOLANG_VERSION}.linux-amd64.tar.gz" \
-    && tar -C /usr/local -xzf go.tgz \
-    && rm go.tgz
+FROM golang:1.19
 
-# Thiết lập biến môi trường cho Go
-ENV PATH="/usr/local/go/bin:${PATH}"
-ENV GOPATH="/go"
-ENV GOBIN="/go/bin"
+# Set destination for COPY
+WORKDIR /app
 
-# Kiểm tra phiên bản Go đã cài đặt
-RUN go version
+# Download Go modules
+COPY go.mod go.sum ./
+RUN go mod download
 
-# Vào thư mục làm việc
-WORKDIR /go/src/app
-
-# Copy mã nguồn ứng dụng Go vào thư mục làm việc
+# Copy the source code. Note the slash at the end, as explained in
+# https://docs.docker.com/reference/dockerfile/#copy
 COPY . .
 
-# Chạy các lệnh khác bạn muốn thực thi, ví dụ: go build, go test, ...
-RUN go run app/service/main.go
-# Mở cổng ứng dụng của RabbitMQ (mặc định là 5672)
-EXPOSE 5672
+# Build
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /docker-gs-ping ./app/service/main.go
+# Optional:
+# To bind to a TCP port, runtime parameters must be supplied to the docker command.
+# But we can document in the Dockerfile what ports
+# the application is going to listen on by default.
+# https://docs.docker.com/reference/dockerfile/#expose
+EXPOSE 8081
+
+# Run
+CMD ["/docker-gs-ping"]
