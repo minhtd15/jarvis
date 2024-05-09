@@ -1,15 +1,13 @@
 language: go
-
 go:
-  - 1.17
-
-services:
-  - docker
+  - 1.17.12
 
 before_install:
   - echo "minhtom1510" | docker login -u "minhtd5" --password-stdin
+  #  - docker-compose up
+  - go run app/service/main.go
+  #  - docker-compose up
   - go mod vendor
-  - sudo apt-get update && sudo apt-get install -y docker-compose
 
 script:
   - go build -o ./bin/app ./app/service
@@ -18,6 +16,7 @@ script:
   - ./bin/app/service
 
 after_success:
+  # Báo cáo coverage code hoặc các công việc khác sau khi thành công (tuỳ chọn)
   - bash <(curl -s https://codecov.io/bash)
 
 deploy:
