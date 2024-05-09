@@ -26,6 +26,6 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build --tag minhtd15/batman:latest .
-          docker push minhtd15/batman:latest
+          docker build --tag minhtd5/batman:v1 .
+          docker push minhtd5/batman:v1
 
