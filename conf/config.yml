@@ -32,7 +32,8 @@ flashClient:
   get-yearly-revenue: "b/v1/flash/yearly-revenue"
 
 redisClient:
-  addr: "localhost:6379"
+  addr: "10.56.158.182:6379"
   password: ""
   db: 0
+
 

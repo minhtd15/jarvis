@@ -161,19 +161,21 @@ func initFlashClient(config api.Config) client.FlashClientCfg {
 }
 
 func initRedisClient(config api.Config) *redis.Client {
-	ctx := context.Background()
+	//ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     config.RedisClientTmp.Addr,
-		Password: config.RedisClientTmp.Password, // no password set
-		DB:       0,                              // use default DB
+		Addr:     "redis-18588.c1.asia-northeast1-1.gce.redns.redis-cloud.com:18588",
+		Username: "default",
+		Password: "WxyRaDv6ueFU1ljzgEwPCGcf1brbcDhh", // use default DB
 	})
 	log.Infof("Redis client created %v", rdb)
 
-	status, err := rdb.Ping(ctx).Result()
-	log.Infof("Redis client status %v, %v", status, err)
+	// Kết nối đến Redis
+	ctx := context.Background()
+	err := rdb.Ping(ctx).Err()
 	if err != nil {
-		log.Fatalf("Failed to ping redis: %v", err)
+		fmt.Println("Failed to connect to Redis:", err)
+		return nil
 	}
-	log.Infof("Redis client status %v", status)
+	//log.Infof("Redis client status %v", status)
 	return rdb
 }

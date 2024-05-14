@@ -34,22 +34,38 @@ func NewUserManagementStore(userManagementStoreCfg UserManagementStoreCfg) *user
 }
 
 func (u *userManagementStore) GetByUserNameStore(userName string, email string, userId string, ctx context.Context) (batman.UserResponse, error) {
-	log.Infof("Get user information by UserName")
+	log.Infof("Retrieving user information for UserName: %s", userName)
 
 	entity := batman.UserResponse{}
 	sqlQuery := "SELECT * FROM USER WHERE USERNAME = ? OR EMAIL = ? OR USER_ID = ?"
 	var tmp sql.NullString
+
 	// execute sql query
-	err := u.db.QueryRowxContext(ctx, sqlQuery, userName, email, userId).Scan(&entity.UserId, &entity.UserName, &entity.Email, &entity.Role, &entity.DOB, &entity.StartDate, &entity.JobPosition, &entity.Password, &entity.FullName, &entity.Gender, &tmp)
+	err := u.db.QueryRowxContext(ctx, sqlQuery, userName, email, userId).Scan(
+		&entity.UserId,
+		&entity.UserName,
+		&entity.Email,
+		&entity.Role,
+		&entity.DOB,
+		&entity.StartDate,
+		&entity.JobPosition,
+		&entity.Password,
+		&entity.FullName,
+		&entity.Gender,
+		&tmp,
+	)
+
 	if err != nil {
 		if err == sql.ErrNoRows {
-			//log.WithError(err).Errorf("Cannot find user with user name: %s", userName)
+			log.Infof("No user found with UserName: %s, Email: %s, or UserID: %d", userName, email, userId)
 			return entity, nil
 		}
-		log.WithError(err).Errorf("Cannot get info from database for user: %s", userName)
+		log.WithError(err).Errorf("Failed to get user info from database for UserName: %s", userName)
 		return entity, err
 	}
+
 	return entity, nil
+
 }
 
 func (u *userManagementStore) InsertNewUserStore(newUser user.UserEntity, ctx context.Context) error {
@@ -954,4 +970,22 @@ func (u *userManagementStore) GetCourseManagerEntityByCourseId(courseId string, 
 	}
 	log.Infof("Successfully retrieved course manager entities by course ID")
 	return entities, &courseTypeId, nil
+}
+
+func (u *userManagementStore) GetByNickname(nickname string, ctx context.Context) (user.UserEntity, error) {
+	entity := user.UserEntity{}
+	sqlQuery := "SELECT * FROM USER WHERE USERNAME = ?"
+
+	// execute sql query
+	err := u.db.GetContext(ctx, &entity, sqlQuery, nickname)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Infof("No user found with nickname: %s", err)
+			return entity, nil
+		}
+		log.WithError(err).Errorf("Failed to get user info from database for nickname: %s", nickname)
+		return entity, err
+	}
+
+	return entity, nil
 }

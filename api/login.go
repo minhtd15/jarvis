@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	api_request "education-website/api/request"
 	api_response "education-website/api/response"
 	"education-website/entity/user"
@@ -326,19 +327,20 @@ func handleCallback(w http.ResponseWriter, r *http.Request) {
 	//role := r.URL.Query().Get("role")
 
 	// Thực hiện giao dịch mã xác thực để nhận mã thông báo từ Auth0
-	nickname, err := exchangeAuthCode(authorizationCode)
+	response, err := exchangeAuthCode(authorizationCode)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to exchange authorization code for tokens: %s", err)
 		http.Error(w, "Failed to exchange authorization code for tokens", http.StatusInternalServerError)
 		return
 	}
-	log.Infof("Nickname: %s", nickname)
 
-	// get user info by nickname
-	// Tiếp tục xử lý ứng dụng của bạn tại đây, ví dụ lưu trữ thông tin người dùng vào phiên làm việc (session) hoặc cơ sở dữ liệu
+	// Trả về phản hồi JSON
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
-func exchangeAuthCode(code string) (string, error) {
+func exchangeAuthCode(code string) (map[string]interface{}, error) {
 	// Cấu trúc yêu cầu trao đổi mã xác thực
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
@@ -351,7 +353,7 @@ func exchangeAuthCode(code string) (string, error) {
 	resp, err := http.PostForm("https://dev-5wpln5bbc476iydk.us.auth0.com/oauth/token", data)
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
@@ -361,14 +363,14 @@ func exchangeAuthCode(code string) (string, error) {
 		IDToken     string `json:"id_token"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Giải mã IDToken để truy cập thông tin vai trò
 	claims := jwt.MapClaims{}
 	_, _, err = new(jwt.Parser).ParseUnverified(tokenResp.IDToken, &claims)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	nickname := ""
 	if value, ok := claims["nickname"].(string); ok {
@@ -380,7 +382,34 @@ func exchangeAuthCode(code string) (string, error) {
 	//role := getRoleByAuthManagementAPI()
 	//log.Infof("Role: %s", role)
 
-	return nickname, nil
+	// get user other information on database
+	userInfo, err := userService.GetByNicknameService(nickname, context.Context(context.Background()))
+	if err != nil {
+		log.WithError(err).Errorf("Failed to get user information by nickname: %s", err)
+		return nil, err
+	}
+
+	generatedToken := jwtService.GenerateToken(user.UserEntity{
+		UserId:   userInfo.UserId,
+		UserName: userInfo.UserName,
+		FullName: userInfo.FullName,
+		Role:     userInfo.Role,
+	})
+
+	userInfoWithToken := map[string]interface{}{
+		"user": api_response.UserDto{
+			UserId:      userInfo.UserId,
+			UserName:    userInfo.UserName,
+			FullName:    userInfo.FullName,
+			Email:       userInfo.Email,
+			Role:        userInfo.Role,
+			DOB:         userInfo.DOB,
+			JobPosition: userInfo.JobPosition,
+		},
+		"token": generatedToken,
+	}
+
+	return userInfoWithToken, nil
 }
 
 //func getRoleByAuthManagementAPI() string {

@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"database/sql"
 	batman "education-website"
 	api_request "education-website/api/request"
 	api_response "education-website/api/response"
@@ -44,6 +45,10 @@ func (u userService) GetByUserName(userName string, email string, userId string,
 
 	// init store user in here
 	rs, err := u.userStore.GetByUserNameStore(userName, email, userId, ctx)
+	if errors.Is(err, sql.ErrNoRows) {
+		log.WithError(err).Errorf("No user found")
+		return nil, err
+	}
 	if err != nil {
 		log.WithError(err).Errorf("Error getting user information from database")
 		return nil, err
@@ -584,4 +589,8 @@ func (u userService) GetStudentPaymentStatusByCourseIdService(courseId string, c
 	}
 
 	return paymentStatus, nil
+}
+
+func (u userService) GetByNicknameService(nickname string, ctx context.Context) (user.UserEntity, error) {
+	return u.userStore.GetByNickname(nickname, ctx)
 }

@@ -59,6 +59,7 @@ type UserService interface {
 	ModifyStudentInformation(rq api_request.ModifyStudentRequest, ctx context.Context) error
 	InsertNewUserByJobPosition(rq api_request.NewUserAddedByAdmin, ctx context.Context) error
 	GetStudentPaymentStatusByCourseIdService(courseId string, ctx context.Context) ([]response.PaymentStatusByCourseIdResponse, error)
+	GetByNicknameService(nickname string, ctx context.Context) (user.UserEntity, error)
 }
 
 type UserStore interface {
@@ -86,4 +87,5 @@ type UserStore interface {
 	DeleteStudentInCourseStore(rq api_request.DeleteStudentRequest, ctx context.Context) error
 	ModifyStudentInformationStore(rq api_request.ModifyStudentRequest, ctx context.Context) error
 	GetCourseManagerEntityByCourseId(courseId string, ctx context.Context) ([]course_class.CourseManagerEntity, *int, error)
+	GetByNickname(nickname string, ctx context.Context) (user.UserEntity, error)
 }

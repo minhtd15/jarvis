@@ -1,0 +1,27 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  type: LoadBalancer
+  selector:
+    project: batman # Sửa selector để khớp với nhãn của Pod
+  ports:
+    - port: 80
+      targetPort: 8081 # Sửa targetPort để khớp với containerPort của Pod
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: batman
+  labels:
+    environment: production # Sửa lỗi chính tả trong key của nhãn (từ enviroment thành environment)
+    project: batman
+spec:
+  containers:
+    - image: minhtd5/batman
+      name: batman
+      ports:
+        - containerPort: 8081
+          protocol: TCP
