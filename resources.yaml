@@ -20,7 +20,7 @@ metadata:
     project: batman
 spec:
   containers:
-    - image: minhtd5/batman
+    - image: minhtd5/batman@v1
       name: batman
       ports:
         - containerPort: 8081
