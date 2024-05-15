@@ -46,16 +46,17 @@ RUN go mod download
 COPY . .
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /docker-gs-ping ./app/service/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /batman1 ./app/service/main.go
+#RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /docker-gs-ping ./app/service/main.go
 # Optional:
-# To bind to a TCP port, runtime parameters must be supplied to the docker command.
+# To bind to a TCP port, runtime parametememrs must be supplied to the docker command.
 # But we can document in the Dockerfile what ports
 # the application is going to listen on by default.
 # https://docs.docker.com/reference/dockerfile/#expose
-EXPOSE 8081
+EXPOSE 80
 
 # Run
-CMD ["/docker-gs-ping"]
+CMD ["/batman1"]
 
 
 

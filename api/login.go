@@ -296,8 +296,8 @@ func loginViaThirdParty(w http.ResponseWriter, r *http.Request) {
 
 	auth0Domain := "dev-5wpln5bbc476iydk.us.auth0.com"
 	clientID := "wDIUqMHxB4XxNDzOUbhtDO66Qd72kJ8a"
-	redirectURI := "http://localhost:8081/e/v1/callback"
-
+	//redirectURI := "http://localhost:8081/e/v1/callback"
+	redirectURI := "http://localhost:3000/web/loading"
 	loginURL := "https://" + auth0Domain + "/authorize" +
 		"?response_type=code" +
 		"&client_id=" + clientID +
