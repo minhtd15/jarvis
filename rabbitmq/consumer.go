@@ -24,7 +24,7 @@ type Message struct {
 func RabbitMqConsumer(redisClient client.RedisClient, classService education_website.ClassService) error {
 	// Connect to RabbitMQ server
 	//conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-	conn, err := amqp.Dial("amqp://guest:guest@35.189.134.117:5672/")
+	conn, err := amqp.Dial("amqp://guest:guest@104.199.170.255:5672/")
 	//
 	if err != nil {
 		return fmt.Errorf("failed to connect to RabbitMQ server: %v", err)
