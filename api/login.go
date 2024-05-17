@@ -370,6 +370,7 @@ func exchangeAuthCode(code string) (map[string]interface{}, error) {
 	claims := jwt.MapClaims{}
 	_, _, err = new(jwt.Parser).ParseUnverified(tokenResp.IDToken, &claims)
 	if err != nil {
+		log.WithError(err).Errorf("Failed to parse ID token: %s", err)
 		return nil, err
 	}
 	nickname := ""
