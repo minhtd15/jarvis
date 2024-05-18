@@ -46,6 +46,9 @@ jobs:
       - name: Authenticate Docker to Google Cloud Registry
         run: gcloud auth configure-docker
 
+      - name: Authenticate with gcloud
+        run: gcloud auth login
+
       - name: Set up kubectl
         uses: azure/setup-kubectl@v1
         with:
