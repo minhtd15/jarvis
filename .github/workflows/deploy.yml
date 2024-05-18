@@ -35,6 +35,7 @@ jobs:
           docker build --tag minhtd5/batman:v1 .
           docker push minhtd5/batman:v1
 
+
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
