@@ -50,12 +50,16 @@ jobs:
         uses: azure/setup-kubectl@v1
         with:
           version: 'latest'
+#
+#      - name: Create JSON key file
+#        run: echo "${{ secrets.GCP_SA_KEY }}" > /tmp/gcp-key.json
+#
+#      - name: Authenticate with service account key
+#        run: gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
 
       - name: Configure kubectl
         run: |
-          echo '${{ secrets.GCP_SA_KEY }}' > /tmp/gcp-key.json
-          gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
-          gcloud container clusters get-credentials flash --region asia-south1
+          gcloud container clusters get-credentials flash --region asia-south1 --project practical-block-419106
 
 #          gcloud container clusters get-credentials flash --zone ${{ secrets.GKE_CLUSTER_ZONE }}
 
