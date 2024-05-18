@@ -64,8 +64,6 @@ jobs:
         run: |
           gcloud container clusters get-credentials flash --region asia-south1 --project practical-block-419106
 
-#          gcloud container clusters get-credentials flash --zone ${{ secrets.GKE_CLUSTER_ZONE }}
-
       - name: Deploy to GKE
         run: |
 #          kubectl set image deployment/nginx batman=minhtd5/batman:v1
