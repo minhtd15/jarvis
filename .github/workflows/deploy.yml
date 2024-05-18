@@ -35,3 +35,20 @@ jobs:
           docker build --tag minhtd5/batman:v1 .
           docker push minhtd5/batman:v1
 
+      - name: Authenticate Docker to Google Cloud Registry
+        run: gcloud auth configure-docker
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v1
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          gcloud container clusters get-credentials flash --region asia-south1
+#          gcloud container clusters get-credentials flash --zone ${{ secrets.GKE_CLUSTER_ZONE }}
+
+      - name: Deploy to GKE
+        run: |
+          kubectl set image deployment/nginx batman=minhtd5/batman:v1
+          kubectl rollout status deployment/nginx

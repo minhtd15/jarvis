@@ -198,7 +198,7 @@ func NewRouter(config Config) http.Handler {
 	externalRouter := r.PathPrefix("/e/v1").Subrouter()
 
 	externalRouter.HandleFunc("/login-third-party", loginViaThirdParty).Methods(http.MethodGet)
-	externalRouter.HandleFunc("/callback", handleCallback).Methods(http.MethodGet)
+	externalRouter.HandleFunc("/callback", handleCallback).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/login", handlerLoginUser).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/register", handlerRegisterUser).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/excel-export", handleExcelSalary).Methods(http.MethodPost)
@@ -226,7 +226,7 @@ func NewRouter(config Config) http.Handler {
 	//con.Start()
 
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"http://localhost:8081"},
+		AllowedOrigins: []string{"http://localhost:3001"},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
 		AllowedHeaders: []string{"*"},
 	})
