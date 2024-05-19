@@ -68,16 +68,17 @@ jobs:
 
       - name: Deploy to GKE
         run: |
-          gcloud config set project practical-block-419106
-          gcloud config set compute/zone asia-south1
-          gcloud container clusters get-credentials flash
-          gcloud container clusters update flash --update-addons=HttpLoadBalancing=ENABLED
-          gcloud container clusters update flash --update-addons=HorizontalPodAutoscaling=ENABLED
-          curl -LO https://raw.githubusercontent.com/minhtd15/batman/master/resources.yaml
-          kubectl apply -f resources.yaml
+          kubectl set image deployment/nginx batman=minhtd5/batman:v1
+          kubectl rollout status deployment/nginx
+#          gcloud config set project practical-block-419106
+#          gcloud config set compute/zone asia-south1
+#          gcloud container clusters get-credentials flash
+#          gcloud container clusters update flash --update-addons=HttpLoadBalancing=ENABLED
+#          gcloud container clusters update flash --update-addons=HorizontalPodAutoscaling=ENABLED
+#          curl -LO https://raw.githubusercontent.com/minhtd15/batman/master/resources.yaml
+#          kubectl apply -f resources.yaml
 #          kubectl apply -f https://raw.githubusercontent.com/minhtd15/batman/master/resources.yaml
-#          kubectl set image deployment/nginx batman=minhtd5/batman:v1
-#          kubectl rollout status deployment/nginx
+
 
 
 
