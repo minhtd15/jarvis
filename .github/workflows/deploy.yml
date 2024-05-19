@@ -74,8 +74,8 @@ jobs:
 #        run: |
 #          docker push asia-south1-docker.pkg.dev/practical-block-419106/batman/batman:v1
 
-      - name: Authenticate to Google Cloud
-        run: gcloud auth activate-service-account --key-file=${{ secrets.GCP_SA_KEY_FILE }}
+#      - name: Authenticate to Google Cloud
+#        run: gcloud auth activate-service-account --key-file=${{ secrets.GCP_SA_KEY_FILE }}
 
       - name: deploy to gke
         env:
