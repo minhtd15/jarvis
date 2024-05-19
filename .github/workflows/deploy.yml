@@ -67,9 +67,8 @@ jobs:
           GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
         run: |
           gcloud auth configure-docker asia-south1-docker.pkg.dev
-          docker build -t aasia-south1-docker.pkg.dev/practical-block-419106/batman/batman:v1 .
+          docker build -t asia-south1-docker.pkg.dev/practical-block-419106/batman/batman:v1 .
           docker push asia-south1-docker.pkg.dev/practical-block-419106/batman/batman:v1
-      
 
       - name: Authenticate to Google Cloud
         run: gcloud auth activate-service-account --key-file=${{ secrets.GCP_SA_KEY_FILE }}
