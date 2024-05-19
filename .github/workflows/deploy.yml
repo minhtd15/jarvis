@@ -55,10 +55,12 @@ jobs:
           version: 'latest'
 
       - name: Create JSON key file
-        run: echo "${{ secrets.JSON }}" > /tmp/gcp-key.json
+        run: echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > /tmp/gcp-key.json
 
       - name: Authenticate with service account key
-        run: gcloud auth activate-service-account --key-file /tmp/gcp-key.json | base64 -d
+        run: |
+         export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json
+          gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
 
       - name: Configure kubectl
         run: |
