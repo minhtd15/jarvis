@@ -68,9 +68,9 @@ jobs:
 
       - name: Deploy to GKE
         run: |
-          kubectl set image deployment/nginx batman=minhtd5/batman:v1
-          kubectl rollout status deployment/nginx
-#          kubectl apply -f https://raw.githubusercontent.com/minhtd15/batman/master/resources.yaml
+          kubectl apply -f https://raw.githubusercontent.com/minhtd15/batman/master/resources.yaml
+#          kubectl set image deployment/nginx batman=minhtd5/batman:v1
+#          kubectl rollout status deployment/nginx
 
 
 
