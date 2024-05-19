@@ -49,11 +49,6 @@ jobs:
 #      - name: Authenticate with gcloud
 #        run: gcloud auth login
 
-      - name: Install gke-gcloud-auth-plugin
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y google-cloud-sdk-gke-gcloud-auth-plugin
-
       - name: Set up kubectl
         uses: azure/setup-kubectl@v1
         with:
@@ -68,15 +63,19 @@ jobs:
           gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
 
       - name: Configure kubectl
-        env:
-          USE_GKE_GCLOUD_AUTH_PLUGIN: True
         run: |
           gcloud container clusters get-credentials flash --region asia-south1 --project practical-block-419106
 
       - name: Deploy to GKE
         run: |
-          kubectl apply -f https://raw.githubusercontent.com/minhtd15/batman/master/resources.yaml --validate=false
-          kubectl rollout status deployment/nginx
+          gcloud config set project practical-block-419106
+          gcloud config set compute/zone asia-south1
+          gcloud container clusters get-credentials flash
+          gcloud container clusters update flash --update-addons=HttpLoadBalancing=ENABLED
+          gcloud container clusters update flash --update-addons=HorizontalPodAutoscaling=ENABLED
+          curl -LO https://raw.githubusercontent.com/minhtd15/batman/master/resources.yaml
+          kubectl apply -f resources.yaml
+#          kubectl apply -f https://raw.githubusercontent.com/minhtd15/batman/master/resources.yaml
 #          kubectl set image deployment/nginx batman=minhtd5/batman:v1
 #          kubectl rollout status deployment/nginx
 
