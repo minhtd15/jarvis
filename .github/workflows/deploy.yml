@@ -66,9 +66,9 @@ jobs:
         env:
           GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
         run: |
-          gcloud auth configure-docker asia-south1-docker.pkg.dev
-          docker build -t asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/demo/nginx:latest .
-          docker push asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/demo/nginx:latest
+          gcloud auth configure-docker minhtd5/batman:v1
+          docker build -t minhtd5/batman:v1 .
+          docker push minhtd5/batman:v1
 
       - name: deploy to gke
         env:
