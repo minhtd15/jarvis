@@ -68,6 +68,10 @@ jobs:
         run: |
           gcloud auth configure-docker asia-south1-docker.pkg.dev
           docker build -t asia-south1-docker.pkg.dev/practical-block-419106/batman/batman:v1 .
+#          docker push asia-south1-docker.pkg.dev/practical-block-419106/batman/batman:v1
+
+      - name: Push Docker Image
+        run: |
           docker push asia-south1-docker.pkg.dev/practical-block-419106/batman/batman:v1
 
       - name: Authenticate to Google Cloud
