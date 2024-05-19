@@ -54,22 +54,46 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Create JSON key file
-        run: echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > /tmp/gcp-key.json
+      - name: install the gcloud cli
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          project_id: ${{ secrets.GOOGLE_PROJECT }}
+          service_account_key: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          install_components: 'gke-gcloud-auth-plugin'
+          export_default_credentials: true
 
-      - name: Authenticate with service account key
+      - name: build and push the docker image
+        env:
+          OOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
         run: |
-          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json
-          gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
+          gcloud auth configure-docker us-central1-docker.pkg.dev
+          docker build -t us-central1-docker.pkg.dev/$GOOGLE_PROJECT/demo/nginx:latest .
+          docker push us-central1-docker.pkg.dev/$GOOGLE_PROJECT/demo/nginx:latest
 
-      - name: Configure kubectl
+      - name: deploy to gke
+        env:
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
         run: |
-          gcloud container clusters get-credentials flash --region asia-south1 --project practical-block-419106
+          gcloud container clusters get-credentials flash --region asia-south1
+          sed -i "s/GOOGLE_PROJECT/$GOOGLE_PROJECT/g" resources.yaml
+          kubectl apply -f resources.yaml
 
-      - name: Deploy to GKE
-        run: |
-          kubectl set image deployment/nginx batman=minhtd5/batman:v1
-          kubectl rollout status deployment/nginx
+#      - name: Create JSON key file
+#        run: echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > /tmp/gcp-key.json
+#
+#      - name: Authenticate with service account key
+#        run: |
+#          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json
+#          gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
+#
+#      - name: Configure kubectl
+#        run: |
+#          gcloud container clusters get-credentials flash --region asia-south1 --project practical-block-419106
+#
+#      - name: Deploy to GKE
+#        run: |
+#          kubectl set image deployment/nginx batman=minhtd5/batman:v1
+#          kubectl rollout status deployment/nginx
 #          gcloud config set project practical-block-419106
 #          gcloud config set compute/zone asia-south1
 #          gcloud container clusters get-credentials flash
