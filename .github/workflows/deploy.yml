@@ -64,18 +64,18 @@ jobs:
 
       - name: build and push the docker image
         env:
-          OOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
         run: |
-          gcloud auth configure-docker us-central1-docker.pkg.dev
-          docker build -t us-central1-docker.pkg.dev/$GOOGLE_PROJECT/demo/nginx:latest .
-          docker push us-central1-docker.pkg.dev/$GOOGLE_PROJECT/demo/nginx:latest
+          gcloud auth configure-docker asia-south1-docker.pkg.dev
+          docker build -t asia-south1-docker.pkg.dev/GCP_PROJECT_ID/demo/nginx:latest .
+          docker push asia-south1-docker.pkg.dev/GCP_PROJECT_ID/demo/nginx:latest
 
       - name: deploy to gke
         env:
-          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
         run: |
           gcloud container clusters get-credentials flash --region asia-south1
-          sed -i "s/GOOGLE_PROJECT/$GOOGLE_PROJECT/g" resources.yaml
+          sed -i "s/GCP_PROJECT_ID/GCP_PROJECT_ID/g" resources.yaml
           kubectl apply -f resources.yaml
 
 #      - name: Create JSON key file
