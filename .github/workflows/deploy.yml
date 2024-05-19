@@ -66,9 +66,12 @@ jobs:
         env:
           GOOGLE_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
         run: |
-          gcloud auth configure-docker minhtd5/batman:v1
-          docker build -t minhtd5/batman:v1 .
-          docker push minhtd5/batman:v1
+          gcloud auth configure-docker asia-south1-docker.pkg.dev
+          docker build -t asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/batman/batman:v1 .
+          docker push asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/batman/batman:v1
+          
+      - name: Authenticate to Google Cloud
+        run: gcloud auth activate-service-account --key-file=${{ secrets.GCP_SA_KEY_FILE }}
 
       - name: deploy to gke
         env:
