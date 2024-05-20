@@ -297,7 +297,7 @@ func loginViaThirdParty(w http.ResponseWriter, r *http.Request) {
 	auth0Domain := "dev-5wpln5bbc476iydk.us.auth0.com"
 	clientID := "wDIUqMHxB4XxNDzOUbhtDO66Qd72kJ8a"
 	//redirectURI := "http://localhost:8081/e/v1/callback"
-	redirectURI := "http://localhost:3001/crm-tiw/loading"
+	redirectURI := "https://locnguyen3108.github.io/crm-tiw/loading"
 	loginURL := "https://" + auth0Domain + "/authorize" +
 		"?response_type=code" +
 		"&client_id=" + clientID +
@@ -324,6 +324,7 @@ func handleCallback(w http.ResponseWriter, r *http.Request) {
 
 	// Lấy mã xác thực từ truy vấn
 	authorizationCode := r.URL.Query().Get("code")
+	log.Infof("Authorization code: %s", authorizationCode)
 	//role := r.URL.Query().Get("role")
 
 	// Thực hiện giao dịch mã xác thực để nhận mã thông báo từ Auth0
@@ -333,8 +334,10 @@ func handleCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to exchange authorization code for tokens", http.StatusInternalServerError)
 		return
 	}
+	log.Infof("Response: %v", response)
 
 	// Trả về phản hồi JSON
+	log.Info("Successfully logged in via Auth0")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
@@ -347,7 +350,7 @@ func exchangeAuthCode(code string) (map[string]interface{}, error) {
 	data.Set("client_id", "wDIUqMHxB4XxNDzOUbhtDO66Qd72kJ8a")
 	data.Set("client_secret", "ts5cjzjMmPIvxytIjeBCeW88Re8HRdFL-A9w1PPQ2SxHyUiXVtHNsAacRGNOehd7")
 	data.Set("code", code)
-	data.Set("redirect_uri", "http://localhost:3001/crm-tiw/loading")
+	data.Set("redirect_uri", "https://locnguyen3108.github.io/crm-tiw/loading")
 
 	// Gửi yêu cầu POST đến Auth0 để trao đổi mã xác thực
 	resp, err := http.PostForm("https://dev-5wpln5bbc476iydk.us.auth0.com/oauth/token", data)
