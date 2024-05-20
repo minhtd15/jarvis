@@ -48,7 +48,7 @@ func NewFlashClient(cfg FlashClientCfg) FlashClient {
 func (f flashClient) GetCourseRevenueByCourseId(courseId string, err error) (*response.GetCourseRevenueByCourseIdResponse, error) {
 	log.Infof("Start to get revenue for course %s", courseId)
 	url := fmt.Sprintf("%s/%s?param=%s", f.root, f.getCourseRevenueByCourseId, courseId)
-	url = "http://localhost:8080/b/v1/flash/goodbye?param=123"
+	url = "http://35.200.240.181:8080/b/v1/flash/goodbye?param=123"
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -130,7 +130,7 @@ func (f flashClient) GetRevenueByYear(arr []request.GetCourseRevenueByCourseIdRe
 func (f flashClient) GetAllAvailableCourseFee() ([]response.CoursesFeeResponse, error) {
 	log.Infof("Start to get revenue for all course")
 	url := fmt.Sprintf("%s/%s?param=%s", f.root, f.getCourseRevenueByCourseId)
-	url = "http://localhost:8080/b/v1/flash/goodbye?param=123"
+	url = "http://35.200.240.181:8080/b/v1/flash/goodbye?param=123"
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -161,7 +161,7 @@ func (f flashClient) GetAllAvailableCourseFee() ([]response.CoursesFeeResponse, 
 func (f flashClient) GetPaymentStatusByCourseId(courseId request.PaymentStatusRequest, ctx context.Context) ([]response.PaymentStatusByCourseIdResponse, error) {
 	log.Infof("Start to get payment status for course %s", courseId)
 	url := fmt.Sprintf("%s/%s?param=%s", f.root, f.getCourseRevenueByCourseId)
-	url = "http://localhost:8080/b/v1/flash/paymentStatus"
+	url = "http://35.200.240.181:8080/b/v1/flash/paymentStatus"
 
 	requestBody, err := json.Marshal(courseId)
 	if err != nil {
