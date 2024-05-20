@@ -27,7 +27,7 @@ database:
 #  dbName: fall2324w20g6_tmp
 
 flashClient:
-  root: "http://34.47.130.190:8082/"
+  root: "http://34.100.254.97:8083/"
   get-course-revenue-by-course-id: "b/v1/flash/hello"
   get-yearly-revenue: "b/v1/flash/yearly-revenue"
 
