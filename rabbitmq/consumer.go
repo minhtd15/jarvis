@@ -23,7 +23,7 @@ type Message struct {
 
 func RabbitMqConsumer(redisClient client.RedisClient, classService education_website.ClassService) error {
 	// Connect to RabbitMQ server
-	conn, err := amqp.Dial("amqp://guest:guest@35.244.9.225:5672/")
+	conn, err := amqp.Dial("amqp://guest:guest@35.200.240.181:5672/")
 	//conn, err := amqp.Dial("amqp://guest:guest@104.199.170.255:5672/")
 	//
 	if err != nil {
