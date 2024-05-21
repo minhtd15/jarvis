@@ -226,7 +226,7 @@ func NewRouter(config Config) http.Handler {
 	//con.Start()
 
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"http://locnguyen3108.github.io/crm-tiw"},
+		AllowedOrigins: []string{"http://localhost:3031/crm-tiw"},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
 		AllowedHeaders: []string{"*"},
 	})
