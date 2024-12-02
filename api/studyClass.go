@@ -2,673 +2,210 @@ package api
 
 import (
 	api_request "education-website/api/request"
-	"education-website/rabbitmq"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/websocket"
+	_ "github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/apm"
-	"io/ioutil"
+	"io"
 	"net/http"
-	"strconv"
+	"time"
 )
 
-func handleInsertNewClass(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle insert new course information")
-	logger.Infof("Handle new course information")
-
-	role, ok := r.Context().Value("role").(string)
-	if !ok {
-		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
-		return
-	}
-
-	if role == "user" {
-		response := map[string]interface{}{
-			"message": "You are not allowed to access to this function",
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusForbidden)
-		json.NewEncoder(w).Encode(response)
-	}
-
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.WithError(err).Warningf("Error when reading from request")
-		http.Error(w, "Invalid format", 252001)
-		return
-	}
-
-	json.NewDecoder(r.Body)
-	defer r.Body.Close()
-	var newCourseRequest api_request.NewCourseRequest
-	err = json.Unmarshal(bodyBytes, &newCourseRequest)
-	if err != nil {
-		log.WithError(err).Warningf("Error when unmarshaling data from request")
-		http.Error(w, "Status bad Request", http.StatusInternalServerError)
-		return
-	}
-
-	err = classService.AddNewClass(newCourseRequest, ctx)
-	if err != nil {
-		log.WithError(err).Errorf("Unable to create new class")
-		http.Error(w, "Status bad Request", http.StatusInternalServerError)
-		return
-	}
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		// Cho phép kết nối từ bất kỳ origin nào
+		return true
+	},
 }
 
-func handleGetClassInformation(w http.ResponseWriter, r *http.Request) {
+func handleGetSports(w http.ResponseWriter, r *http.Request) {
 	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle get course information")
-	logger.Infof("Handle course information")
+	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "get all sports")
+	logger.Infof("this API is used to get all sports")
 
-	keys := r.URL.Query()
-	courseId := keys.Get("classId")
-
-	classInfoRequest := api_request.CourseInfoRequest{
-		CourseId: courseId,
-	}
-
-	classInfoResponse, err := classService.GetCourseInformationByClassName(classInfoRequest, ctx)
+	rs, err := classService.GetSportsService(ctx)
 	if err != nil {
-		log.WithError(err).Warningf("Unable to unmarshal data from request")
-		http.Error(w, "Status bad Request", http.StatusInternalServerError) // Return a 400 Bad Request error
-		return
+		log.WithError(err).Errorf("Unable to get all sports")
+		http.Error(w, "Unable to get all sports", http.StatusInternalServerError)
 	}
 
-	response := map[string]interface{}{
-		"message": "Successful getting class information: " + classInfoRequest.CourseId,
-		"data":    classInfoResponse,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-func handleGetAllCourseInformation(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle get all courses information")
-	logger.Infof("Get all courses information")
-
-	allCoursesInfo, err := classService.GetAllCourses(ctx)
-	if err != nil {
-		log.WithError(err).Errorf("Error getting all courses information")
-		http.Error(w, "Status internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	err = redisClient.Save("alo", "userRequest.Email", ctx)
-
-	tmp, err := redisClient.Get("alo", ctx)
-	log.Infof("================================== %s ===============================", tmp)
-
-	//test, err := flashClient.GetCourseRevenueByCourseId(strconv.Itoa(123), err)
-	//log.Infof("============================ %s ============================", test)
-
-	response := map[string]interface{}{
-		"message": "Successful getting all course",
-		"data":    allCoursesInfo,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-func handleClassFromToDateById(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle get default class information")
-	logger.Infof("Get default class information")
-
-	userId, ok := r.Context().Value("user_id").(string)
-	if !ok {
-		http.Error(w, "Unable to get userId from token", http.StatusUnauthorized)
-		return
-	}
-
-	keys := r.URL.Query()
-	fromDate := keys.Get("fromDate")
-	toDate := keys.Get("toDate")
-
-	courseType, err := classService.GetCourseType(ctx)
-	if err != nil {
-		log.WithError(err).Errorf("Unable to get course type")
-		http.Error(w, "unable to get course type api", http.StatusInternalServerError)
-		return
-	}
-
-	schedule, err := classService.GetFromToSchedule(fromDate, toDate, userId, courseType, ctx)
-	if err != nil {
-		log.WithError(err).Errorf("Error getting all schedule api for user: %s", userId)
-		http.Error(w, "Unable to get schedule", http.StatusInternalServerError)
-		return
-	}
-
-	response := map[string]interface{}{
-		"message": "Successful getting schedule information",
-		"data":    schedule,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-//func handleCheckInAttendanceClass(w http.ResponseWriter, r *http.Request) {
-//	ctx := apm.DetachedContext(r.Context())
-//	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle checkin class")
-//	logger.Infof("Start to check in class API")
-//
-//	userTokenId, ok := r.Context().Value("user_id").(string)
-//	if !ok {
-//		http.Error(w, "Unable to get userId from token", http.StatusUnauthorized)
-//		return
-//	}
-//
-//	bodyBytes, err := ioutil.ReadAll(r.Body)
-//	if err != nil {
-//		log.WithError(err).Warningf("Error when reading from request")
-//		http.Error(w, "Invalid format", 252001)
-//		return
-//	}
-//
-//	json.NewDecoder(r.Body)
-//	defer r.Body.Close()
-//	var checkInAttendance api_request.ChecInAttendanceClassRequest
-//	err = json.Unmarshal(bodyBytes, &checkInAttendance)
-//	if err != nil {
-//		log.WithError(err).Errorf("Error marshal Check In Attendance Request: %s", err)
-//		http.Error(w, "Error marshalling checkin attendance request", http.StatusInternalServerError)
-//		return
-//	}
-//
-//	// get the start time of the course to check whether
-//	classInformation, err := classService.GetClassInformationByClassId(checkInAttendance.ClassId, ctx)
-//	if err != nil {
-//		log.WithError(err).Errorf("Error getting class information from db")
-//		http.Error(w, "Error getting class information from db", http.StatusInternalServerError)
-//		return
-//	}
-//
-//	// add information to ATTENDANCE_HISTORY table
-//
-//	// return success check in attendance to user
-//	w.Header().Set("Content-Type", "application/json")
-//	w.WriteHeader(http.StatusOK)
-//}
-
-func checkInStudentAttendance(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle get student attendance by course Id ")
-	logger.Infof("Get class all sessions")
-
-	keys := r.URL.Query()
-	courseId := keys.Get("courseId")
-
-	result, err := userService.GetCourseSessionsService(courseId, ctx)
-	if err != nil {
-		log.WithError(err).Errorf("Unable to get course sessions service")
-		http.Error(w, "unable to get course session api", http.StatusInternalServerError)
-		return
-	}
-
-	response := map[string]interface{}{
-		"message": "Successful getting schedule information",
-		"data":    result,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-func handleGetMySchedule(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle user every class that this person in charge")
-	logger.Infof("Get course in charge")
-
-	username, ok := r.Context().Value("username").(string)
-	if !ok {
-		http.Error(w, "Unable to get userId from token", http.StatusUnauthorized)
-		return
-	}
-
-	result, err := userService.GetAllInChargeCourse(username, ctx)
-	if err != nil {
-		log.WithError(err).Errorf("Unable to get course in charge service")
-		http.Error(w, "unable to get course that this person in charge api", http.StatusInternalServerError)
-		return
-	}
-
-	response := map[string]interface{}{
-		"message": "Successful getting user course in charge",
-		"data":    result,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-func handleGetAllSessionsByCourseId(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle get course all sessions, students, ")
-	logger.Infof("Get class all sessions")
-
-	keys := r.URL.Query()
-	courseId := keys.Get("courseId")
-
-	rs, err := classService.GetAllSessionsByCourseIdService(courseId, ctx)
-	if err != nil {
-		log.WithError(err).Errorf("Unable to get sessions by course Id Service")
-		http.Error(w, "Unable to get sessions by course Id", http.StatusInternalServerError)
-		return
-	}
-
-	response := map[string]interface{}{
-		"message":   "Successful getting sessions for course",
-		"course_id": courseId,
-		"data":      rs,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-func handleFixCourseInformation(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD PUT", "fix course information")
-	logger.Infof("this API is used to modify course information")
-
-	role, ok := r.Context().Value("role").(string)
-	if !ok {
-		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
-		return
-	}
-	if role == "user" {
-		response := map[string]interface{}{
-			"message": "You are not allowed to access to this function",
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusForbidden)
-		json.NewEncoder(w).Encode(response)
-	}
-
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.WithError(err).Warningf("Error when reading from request")
-		http.Error(w, "Invalid format", 252001)
-		return
-	}
-
-	json.NewDecoder(r.Body)
-	defer r.Body.Close()
-
-	var rq api_request.ModifyCourseInformation
-	err = json.Unmarshal(bodyBytes, &rq)
-	if err != nil {
-		log.WithError(err).Errorf("Error marshal request to fix course information")
-		http.Error(w, "Error marshal request to fix course information", http.StatusInternalServerError)
-		return
-	}
-
-	err = classService.FixCourseInformationService(rq, ctx)
-	if err != nil {
-		log.WithError(err).Errorf("Error in service modify course information")
-		http.Error(w, "Error in service modify course information", http.StatusInternalServerError)
-		return
-	}
-
-	response := map[string]interface{}{
-		"message": "Successful fix course information",
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-func AddNoteByClassId(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD POST", "add note to class by classId")
-	logger.Infof("this API is used to add note to class by classId")
-
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.WithError(err).Warningf("Error when reading from request")
-		http.Error(w, "Invalid format", 252001)
-		return
-	}
-
-	role, ok := r.Context().Value("role").(string)
-	if !ok {
-		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
-		return
-	}
-
-	json.NewDecoder(r.Body)
-	defer r.Body.Close()
-	var noteRequest api_request.AddNoteRequest
-	err = json.Unmarshal(bodyBytes, &noteRequest)
-	if err != nil {
-		log.WithError(err).Warningf("Error when unmarshaling data from request")
-		http.Error(w, "Status bad Request", http.StatusInternalServerError)
-		return
-	}
-
-	intNumber, err := strconv.ParseInt(noteRequest.ClassId, 10, 64)
-	if err != nil {
-		// Handle the error if the conversion fails
-		fmt.Println("Error converting string to int:", err)
-		return
-	}
-
-	taList, err := classService.GetTAListService(int(intNumber), ctx)
-
-	addTA := Difference(noteRequest.TaList, taList)    // get the new TA to add
-	deleteTA := Difference(taList, noteRequest.TaList) // get the new TA to delete
-
-	log.Infof("ADD TA: %v", addTA)
-	log.Infof("DELETE TA: %v", deleteTA)
-
-	if noteRequest.Check && role == "user" {
-		response := map[string]interface{}{
-			"message": "You are not allowed to access to this function",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusForbidden)
-		json.NewEncoder(w).Encode(response)
-	}
-
-	err = classService.AddNoteService(noteRequest, addTA, deleteTA, ctx)
-	if err != nil {
-		log.WithError(err).Warningf("Error service add note")
-		http.Error(w, "Error service add note", http.StatusInternalServerError)
-		return
-	}
-
-	response := map[string]interface{}{
-		"message": "Successful getting add note to class by classId",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-func Difference(arr1, arr2 []string) []string {
-	diffMap := make(map[string]bool)
-
-	// Mark all elements in arr2 as true
-	for _, num := range arr2 {
-		diffMap[num] = true
-	}
-
-	// Filter elements in arr1 that are not in arr2
-	var result []string
-	for _, num := range arr1 {
-		if !diffMap[num] {
-			result = append(result, num)
-		}
-	}
-
-	return result
-}
-
-func handleGetCheckInWorkerHistory(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "GET the check in history of course")
-	logger.Infof("this API is used to GET the check in history of course")
-
-	keys := r.URL.Query()
-	courseId := keys.Get("courseId")
-
-	rs, err := classService.GetCheckInHistoryByCourseId(courseId, ctx)
-	if err != nil {
-		log.WithError(err).Warningf("Error get check in history for course %s", courseId)
-		http.Error(w, "Error get check in history", http.StatusInternalServerError)
-		return
-	}
-
-	response := map[string]interface{}{
-		"message": "Successful getting check in history for course",
-		"data":    rs,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-func handlePostSubClass(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD POST", "add sub class")
-	logger.Infof("this API is used to add sub class to course")
-
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.WithError(err).Warningf("Error when reading from request")
-		http.Error(w, "Invalid format", 252001)
-		return
-	}
-
-	role, ok := r.Context().Value("role").(string)
-	if !ok {
-		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
-		return
-	}
-
-	if role == "user" {
-		response := map[string]interface{}{
-			"message": "You are not allowed to access to this function",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, "Status bad Request", http.StatusForbidden)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	json.NewDecoder(r.Body)
-	defer r.Body.Close()
-	var subClassRq api_request.NewSubClassRequest
-	err = json.Unmarshal(bodyBytes, &subClassRq)
-	if err != nil {
-		log.WithError(err).Warningf("Error when unmarshaling data from request")
-		http.Error(w, "Status bad Request", http.StatusInternalServerError)
-		return
-	}
-
-	err = classService.AddSubClassService(subClassRq, ctx)
-	if err != nil {
-		log.WithError(err).Warningf("Error add new sub class")
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	response := map[string]interface{}{
-		"message": "Successful add sub class",
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-func handleGetSubClass(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "get all sub class for course")
-	logger.Infof("this API is used to add sub class to course")
-
-	keys := r.URL.Query()
-	courseId := keys.Get("courseId")
-
-	rs, err := classService.GetSubClassByCourseId(courseId, ctx)
-	if err != nil {
-		log.WithError(err).Errorf("Unable to get sub class for course %s", courseId)
-		http.Error(w, "Unable to get sub class by course Id", http.StatusInternalServerError)
-		return
-	}
-
-	response := map[string]interface{}{
-		"message": "Successful getting sub class for course",
-		"data":    rs,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-func handleDeleteSubClass(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD DELETE", "delete sub class")
-	logger.Infof("this API is used to delete sub class to course")
-
-	role, ok := r.Context().Value("role").(string)
-	if !ok {
-		http.Error(w, "Unable to get role/userName from token", http.StatusUnauthorized)
-		return
-	}
-
-	if role == "user" {
-		response := map[string]interface{}{
-			"message": "You are not allowed to access to this function",
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusForbidden)
-		json.NewEncoder(w).Encode(response)
-	}
-
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.WithError(err).Warningf("Error when reading from request")
-		http.Error(w, "Invalid format", 252001)
-		return
-	}
-
-	json.NewDecoder(r.Body)
-	defer r.Body.Close()
-	var deleteSubClassRq api_request.DeleteSubClassRequest
-	err = json.Unmarshal(bodyBytes, &deleteSubClassRq)
-	if err != nil {
-		log.WithError(err).Warningf("Error when unmarshaling data from request")
-		http.Error(w, "Status bad Request", http.StatusInternalServerError)
-		return
-	}
-
-	err = classService.DeleteSubClassService(deleteSubClassRq, ctx)
-	if err != nil {
-		log.WithError(err).Warningf("Error delete sub class")
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	response := map[string]interface{}{
-		"message": "Successful delete sub class",
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-func handleGetAllAvailableCourseFee(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "get all available course fee")
-	logger.Infof("this API is used to get all available course fee")
-
-	rs, err := classService.GetAllAvailableCourseFeeService()
-	if err != nil {
-		log.WithError(err).Errorf("Unable to get all available course fee")
-		http.Error(w, "Unable to get all available course fee", http.StatusInternalServerError)
-		return
-	}
-
-	response := map[string]interface{}{
-		"message": "Successful getting all available course fee",
-		"data":    rs,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-func handleGetCourseRevenueByCourseId(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "get course fee by course Id")
-	logger.Infof("this API is used to get course fee by course Id")
-
-	keys := r.URL.Query()
-	courseId := keys.Get("courseId")
-
-	rs, err := classService.GetCourseRevenueByCourseIdService(courseId, ctx)
-	if err != nil {
-		log.Errorf("Unable to get course fee by course Id: %s; err : %v", courseId, err)
-		http.Error(w, "Unable to get course fee by course Id", http.StatusInternalServerError)
-		return
-	}
-
-	response := map[string]interface{}{
-		"message": "Successful getting course fee by course Id",
-		"data":    rs,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-func handleGetCompanyRevenue(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "get company revenue")
-	logger.Infof("this API is used to get company revenue")
-
-	keys := r.URL.Query()
-	year := keys.Get("year")
-
-	// get course that has start date in year
-
-	err := classService.GetCourseByYear(year, ctx)
-	if err != nil {
-		log.Errorf("Unable to get course in year: %s; err : %v", year, err)
-		http.Error(w, "Unable to get course in year", http.StatusInternalServerError)
-		return
-	}
-
-	response := map[string]interface{}{
-		"message": "Successful getting company revenue in year",
-		"data":    "",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-func handleReceiveFromRabbit(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "receive data from rabbit")
-	logger.Infof("this API is used to receive data from rabbit")
-
-	//keys := r.URL.Query()
-	//queue := keys.Get("queueName")
-
-	rabbitmq.RabbitMqConsumer(redisClient, classService)
-	//if err != nil {
-	//	log.Errorf("Unable to receive data from rabbit; err : %v", err)
-	//	http.Error(w, "Unable to receive data from rabbit", http.StatusInternalServerError)
-	//	return
+	//response := map[string]interface{}{
+	//	"message": "Successful getting all sports",
+	//	"data":    rs,
 	//}
 
-	response := map[string]interface{}{
-		"message": "Successful receive data from rabbit",
-		"data":    "",
-	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(rs)
+}
+
+func uploadImage(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD POST", "upload image")
+	logger.Infof("this API is used to upload image")
+
+	// Kiểm tra phương thức
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Lấy file từ body request
+	file, _, err := r.FormFile("imageFile")
+	if err != nil {
+		logger.WithError(err).Warningf("Error retrieving file from request")
+		http.Error(w, "Error retrieving file from request", http.StatusBadRequest)
+		return
+	}
+
+	imgData, err := io.ReadAll(file)
+	if err != nil {
+		logger.WithError(err).Error("Error reading file data")
+		http.Error(w, "Error reading file data", http.StatusInternalServerError)
+		return
+	}
+
+	defer file.Close()
+
+	// Đọc thông tin về hình ảnh từ form
+	var rq api_request.UploadImageRequest
+	if err := r.ParseMultipartForm(10 << 20); err != nil { // Giới hạn kích thước form
+		logger.WithError(err).Warningf("Error parsing multipart form")
+		http.Error(w, "Error parsing form", http.StatusBadRequest)
+		return
+	}
+
+	// Lấy sportId từ form
+	sportIdStr := r.FormValue("sportId")
+	if sportIdStr == "" {
+		http.Error(w, "sportId is required", http.StatusBadRequest)
+		return
+	}
+
+	// Chuyển đổi sportId sang số nguyên
+	var sportId int
+	if _, err := fmt.Sscan(sportIdStr, &sportId); err != nil {
+		http.Error(w, "Invalid sportId", http.StatusBadRequest)
+		return
+	}
+
+	// Xử lý file và sportId
+	log.Infof("File: %v", file)
+	rq.SportId = sportId
+
+	// Gọi service để tải lên hình ảnh
+	err = classService.UploadImageService(imgData, rq.SportId, ctx)
+	if err != nil {
+		log.WithError(err).Errorf("Error upload image")
+		http.Error(w, "Error upload image", http.StatusInternalServerError)
+		return
+	}
+
+	// Phản hồi thành công
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Image uploaded successfully"))
+}
+
+func createSchema(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD POST", "create schema")
+	logger.Infof("this API is used to create schema")
+
+	// Kiểm tra phương thức
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Đọc thông tin về schema từ form
+	var rq api_request.CreateSchemaRequest
+	if err := json.NewDecoder(r.Body).Decode(&rq); err != nil {
+		logger.WithError(err).Warningf("Error unmarshaling data from request")
+		http.Error(w, "Invalid format", http.StatusBadRequest)
+		return
+	}
+
+	// Gọi service để tạo schema
+	err := classService.CreateSchemaService(ctx, rq)
+	if err != nil {
+		log.WithError(err).Errorf("Error create schema")
+		http.Error(w, "Error create schema", http.StatusInternalServerError)
+		return
+	}
+
+	// Phản hồi thành công
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Schema created successfully"))
+}
+
+func handleCallbackOAuth2(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "callback oauth2")
+	logger.Infof("this API is used to callback oauth2")
+
+	// Kiểm tra phương thức
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Lấy code từ query
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		http.Error(w, "code is required", http.StatusBadRequest)
+		return
+	}
+
+	// Phản hồi thành công
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Callback oauth2 successfully"))
+}
+
+func handleQueue(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "callback oauth2")
+	logger.Infof("this API is used to callback oauth2")
+
+	// Nâng cấp kết nối HTTP thành WebSocket
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("Upgrade:", err)
+		return
+	}
+	defer conn.Close()
+
+	// Giả lập vị trí hàng đợi (bắt đầu từ vị trí 1030)
+	position := 5
+
+	// Tạo một vòng lặp để gửi thông báo vị trí mỗi 5 giây
+	for position > 0 {
+		// Gửi vị trí hiện tại cho client
+		err := conn.WriteJSON(map[string]interface{}{
+			"position": position,
+		})
+		if err != nil {
+			log.Println("Write error:", err)
+			break
+		}
+
+		// Giảm vị trí sau mỗi lần gửi (giả lập)
+		position--
+
+		// Dừng khi đến vị trí đầu tiên
+		if position == 0 {
+			err := conn.WriteJSON(map[string]interface{}{
+				"message": "Đã đến lượt bạn đặt vé!",
+			})
+			if err != nil {
+				log.Println("Write error:", err)
+				break
+			}
+			break
+		}
+
+		// Đợi 5 giây trước khi gửi cập nhật tiếp theo
+		time.Sleep(5 * time.Second)
+	}
 }

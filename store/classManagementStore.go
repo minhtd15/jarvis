@@ -3,12 +3,11 @@ package store
 import (
 	"context"
 	"database/sql"
-	api_request "education-website/api/request"
-	"education-website/entity/course_class"
-	"education-website/rabbitmq/response"
+	"education-website/api/request"
+	"education-website/entity/sports"
+	"fmt"
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
-	"time"
 )
 
 type classManagementStore struct {
@@ -25,612 +24,137 @@ func NewClassManagementStore(classManagementStoreCfg ClassManagementStoreCfg) *c
 	}
 }
 
-func (c *classManagementStore) InsertNewCourseStore(entity course_class.CourseEntity, rq api_request.NewCourseRequest, schedule []time.Time, ctx context.Context) error {
-	log.Info("insert new class and course to db")
+func (c *classManagementStore) GetSportsStore(ctx context.Context) ([]sports.SportsEntity, error) {
+	log.Infof("Get sports store")
 
-	tx, err := c.db.Begin()
+	sqlQuery := "SELECT SPORT_ID, SPORT_NAME, SPORT_URL FROM SPORTS"
+	var entities []sports.SportsEntity
+	err := c.db.SelectContext(ctx, &entities, sqlQuery)
+
+	if err != nil {
+		log.WithError(err).Errorf("Failed to retrieve sports from the database")
+		return nil, err
+	}
+
+	return entities, nil
+}
+
+func (c *classManagementStore) UploadImageStore(imageFile []byte, sportId int, ctx context.Context) error {
+	log.Infof("Upload image store")
+
+	sqlQuery := "UPDATE SPORTS SET IMAGE = ? WHERE SPORT_ID = ?"
+	_, err := c.db.ExecContext(ctx, sqlQuery, imageFile, sportId)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to upload image to the database")
+		return err
+	}
+
+	return nil
+}
+
+func (c *classManagementStore) CreateSchemaStore(ctx context.Context, createSchemaSql string, request request.CreateSchemaRequest) error {
+	tx1, err := c.db.BeginTxx(ctx, nil)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to begin transaction")
 		return err
 	}
 
-	defer func() {
+	_, err = tx1.ExecContext(ctx, createSchemaSql)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to create schema in the database")
+		err := tx1.Rollback()
 		if err != nil {
-			log.WithError(err).Errorf("Rolling back transaction")
-			tx.Rollback()
-			return
-		}
-		err = tx.Commit()
-		if err != nil {
-			log.WithError(err).Errorf("Error committing transaction")
-		}
-	}()
-
-	// Insert into COURSE table
-	sqlCourse := "INSERT INTO COURSE (COURSE_TYPE_ID, MAIN_TEACHER, ROOM, START_DATE, END_DATE, START_TIME, END_TIME, STUDY_DAYS, LOCATION) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	_, err = tx.Exec(sqlCourse, entity.CourseTypeId, entity.MainTeacher, entity.Room, entity.StartDate, entity.EndDate, rq.StartTime, rq.EndTime, entity.StudyDays, rq.Location)
-	if err != nil {
-		log.WithError(err).Errorf("Failed to insert course into the database")
-		return err
-	}
-
-	// Get the last inserted ID
-	var courseID int64
-	err = tx.QueryRow("SELECT LAST_INSERT_ID()").Scan(&courseID)
-	if err != nil {
-		log.WithError(err).Errorf("Failed to get last insert ID")
-		return err
-	}
-
-	var userId string
-	err = tx.QueryRow("SELECT USER_ID FROM USER WHERE USERNAME = ?", entity.MainTeacher).Scan(&userId)
-	if err != nil {
-		log.WithError(err).Errorf("Failed to get last insert ID")
-		return err
-	}
-
-	// Insert into CLASS table for each schedule entry
-	sqlClass := "INSERT INTO CLASS (COURSE_ID, START_TIME, END_TIME, DATE, ROOM, TYPE_CLASS) VALUES (?, ?, ?, ?, ?, ?)"
-	stmt, err := tx.Prepare(sqlClass)
-	if err != nil {
-		log.WithError(err).Errorf("Failed to prepare SQL statement for CLASS")
-		return err
-	}
-
-	// insert default main teacher in every class of this course
-	sqlQuery := "INSERT INTO CLASS_MANAGER (USER_ID, COURSE_ID, CLASS_ROLE) VALUES (?, ?, ?)"
-	tmp, err := tx.Prepare(sqlQuery)
-	if err != nil {
-		log.WithError(err).Errorf("Failed to prepare SQL statement for CLASS_MANAGER")
-		return err
-	}
-	defer stmt.Close()
-
-	for i := 0; i < len(schedule); i++ {
-		var rs sql.Result
-		if i == len(schedule)-1 {
-			rs, err = stmt.Exec(courseID, rq.StartTime, rq.EndTime, schedule[i], entity.Room, "2")
-			if err != nil {
-				log.WithError(err).Errorf("Failed to insert class into the database")
-				return err
-			}
-		} else {
-			rs, err = stmt.Exec(courseID, rq.StartTime, rq.EndTime, schedule[i], entity.Room, "1")
-			if err != nil {
-				log.WithError(err).Errorf("Failed to insert class into the database")
-				return err
-			}
-		}
-
-		id, err := rs.LastInsertId()
-		if err != nil {
-			log.WithError(err).Errorf("Failed to get last insert ID")
 			return err
 		}
-
-		_, err = tmp.Exec(userId, id, "Teacher")
-		if err != nil {
-			log.WithError(err).Errorf("Failed to insert main teacher into the database")
-			return err
-		}
+		return err
 	}
 
+	if err := tx1.Commit(); err != nil {
+		log.WithError(err).Errorf("Failed to commit transaction")
+		return err
+	}
+
+	tx1, err = c.db.BeginTxx(ctx, nil)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to begin transaction")
+		return err
+	}
+
+	_, err = tx1.ExecContext(ctx, fmt.Sprintf("SET search_path TO %s", request.CityId))
+	log.Infof("set search path to %s", request.CityId)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to set search path")
+		tx1.Rollback()
+		return err
+	}
+
+	err = executeSqlFile(c.db.DB, request, tx1)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to execute sql file")
+		tx1.Rollback()
+		return err
+	}
+
+	if err := tx1.Commit(); err != nil {
+		log.WithError(err).Errorf("Failed to commit transaction")
+		return err
+	}
 	return nil
 }
 
-func (c *classManagementStore) GetAllCoursesStore(ctx context.Context) ([]course_class.CourseEntity, error) {
-	log.Infof("Get all courses")
-
-	sqlQuery := "SELECT C.*, CONCAT(CT.CODE, COURSE_ID) AS COURSE_NAME, CT.TOTAL_SESSIONS FROM COURSE C join COURSE_TYPE CT ON C.COURSE_TYPE_ID = CT.COURSE_TYPE_ID"
-	var entities []course_class.CourseEntity
-	err := c.db.SelectContext(ctx, &entities, sqlQuery)
-
-	if err != nil {
-		log.WithError(err).Errorf("Failed to retrieve courses from the database")
-		return nil, err
-	}
-
-	return entities, nil
-
-}
-
-func (c *classManagementStore) GetSessionsByCourseType(typeCourseCode string, ctx context.Context) (*int, *int, error) {
-	log.Infof("Get total sessions of course %s", typeCourseCode)
-
-	var totalSessions int
-	var courseTypeId int
-	sqlQuery := "SELECT TOTAL_SESSIONS, COURSE_TYPE_ID FROM COURSE_TYPE WHERE CODE = ?"
-
-	err := c.db.QueryRowxContext(ctx, sqlQuery, typeCourseCode).Scan(&totalSessions, &courseTypeId)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			log.WithError(err).Errorf("No row in db for course %s", typeCourseCode)
-			return nil, nil, err
-		}
-		log.WithError(err).Errorf("Cannot find total sessions for course %s", typeCourseCode)
-		return nil, nil, err
-	}
-
-	return &totalSessions, &courseTypeId, err
-}
-
-func (c *classManagementStore) GetCourseInformationStore(request api_request.CourseInfoRequest, ctx context.Context) (course_class.CourseEntity, error) {
-	log.Info("Get class information from database")
-
-	entity := course_class.CourseEntity{}
-	sqlQuery := "select C.* , CONCAT(CT.CODE, C.COURSE_ID) AS COURSE_NAME, CT.TOTAL_SESSIONS " +
-		"FROM COURSE C join COURSE_TYPE CT " +
-		"where C.COURSE_TYPE_ID = CT.COURSE_TYPE_ID AND C.COURSE_ID = ?"
-
-	err := c.db.QueryRowxContext(ctx, sqlQuery, request.CourseId).Scan(&entity.CourseId, &entity.CourseTypeId, &entity.MainTeacher, &entity.Room, &entity.StartDate, &entity.EndDate, &entity.StartTime, &entity.EndTime, &entity.StudyDays, &entity.Location, &entity.CourseName, &entity.TotalSessions)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			log.WithError(err).Errorf("Cannot find course %s information", request.CourseId)
-			return entity, err
-		}
-		log.WithError(err).Errorf("Cannot get info from database for user: %s", request.CourseId)
-		return entity, err
-	}
-	return entity, nil
-}
-
-func (c *classManagementStore) GetTeacherStore(request api_request.CourseInfoRequest, ctx context.Context) (string, []string, error) {
-	log.Info("Get teacher information")
-
-	var teacherName string
-	sqlQuery := "SELECT CM.CLASS_ROLE from CLASS_MANAGER cm where cm.CLASS_ID = ? AND CM.CLASS_ROLE = 'Teacher'"
-	err := c.db.QueryRowxContext(ctx, sqlQuery, request.CourseId).Scan(teacherName)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			log.WithError(err).Errorf("Cannot find Teacher with class name: %s", request.CourseId)
-			return "", []string{}, err
-		}
-		log.WithError(err).Errorf("Cannot get info from database for user: %s", request.CourseId)
-		return "", []string{}, err
-	}
-
-	var teachingAssistant []string
-	sqlQuery = "SELECT CM.CLASS_ROLE from CLASS_MANAGER cm where cm.CLASS_ID = ? AND CM.CLASS_ROLE = 'TA'"
-	err = c.db.QueryRowxContext(ctx, sqlQuery, request.CourseId).Scan(teachingAssistant)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			log.WithError(err).Errorf("Cannot find TA with class name: %s", request.CourseId)
-			return "", []string{}, err
-		}
-		log.WithError(err).Errorf("Cannot get info from database for user: %s", request.CourseId)
-		return "", []string{}, err
-	}
-
-	return teacherName, teachingAssistant, nil
-}
-
-func (c *classManagementStore) GetAllCourseType(ctx context.Context) ([]course_class.CourseTypeEntity, error) {
-	log.Infof("Get all courses type")
-
-	sqlQuery := "SELECT * FROM COURSE_TYPE"
-	var entities []course_class.CourseTypeEntity
-	err := c.db.SelectContext(ctx, &entities, sqlQuery)
-
-	if err != nil {
-		log.WithError(err).Errorf("Failed to retrieve courses from the database")
-		return nil, err
-	}
-
-	return entities, nil
-}
-
-func (c *classManagementStore) GetClassFromToDateStore(fromDate string, toDate string, userId string, ctx context.Context) ([]course_class.FromToScheduleEntity, error) {
-	log.Infof("Get all classes for user %s from %s, to %s", userId, fromDate, toDate)
-	sqlQuery := "SELECT C.COURSE_ID, CO.COURSE_TYPE_ID, C.START_TIME, C.END_TIME, C.DATE " +
-		"FROM CLASS C " +
-		"JOIN CLASS_MANAGER CM ON C.CLASS_ID = CM.COURSE_ID " +
-		"JOIN COURSE CO ON C.COURSE_ID = CO.COURSE_ID " +
-		"WHERE CM.USER_ID = ? " +
-		"AND C.DATE >= ? AND C.DATE <= ?"
-
-	var rs []course_class.FromToScheduleEntity
-	err := c.db.SelectContext(ctx, &rs, sqlQuery, userId, fromDate, toDate)
-	if err != nil {
-		log.WithError(err).Errorf("Failed to get class for user %s from the database", userId)
-		return nil, err
-	}
-	return rs, nil
-}
-
-func (c *classManagementStore) DeleteCourseById(courseId string, ctx context.Context) error {
-	log.Infof("Delete course %s store", courseId)
-
-	// Start a transaction
-	tx, err := c.db.BeginTx(ctx, nil)
-	if err != nil {
-		log.Errorf("Error starting transaction: %v", err)
-		return err
-	}
-
-	defer tx.Rollback()
-
-	sqlQuery := "DELETE FROM COURSE WHERE COURSE_ID = ?"
-
-	_, err = tx.ExecContext(ctx, sqlQuery, courseId)
-	if err != nil {
-		log.Errorf("Error deleting course: %v", err)
-		return err
-	}
-
-	sqlQuery = "DELETE FROM CLASS WHERE COURSE_ID = ?"
-	_, err = tx.ExecContext(ctx, sqlQuery, courseId)
-	if err != nil {
-		log.Errorf("Error deleting course: %v", err)
-		return err
-	}
-
-	// Commit the transaction if everything is successful
-	if err := tx.Commit(); err != nil {
-		log.Errorf("Error committing transaction: %v", err)
-		return err
-	}
-
-	log.Infof("Course with ID %s deleted successfully", courseId)
-	return nil
-}
-
-func (c *classManagementStore) DeleteClassByIdStore(classId string, ctx context.Context) error {
-	log.Infof("Start to delete class %s store", classId)
-	tx, err := c.db.BeginTx(ctx, nil)
-	if err != nil {
-		log.Errorf("Error starting transaction: %v", err)
-		return err
-	}
-
-	defer tx.Rollback()
-
-	sqlQuery := "DELETE FROM CLASS WHERE CLASS_ID = ?"
-	_, err = tx.ExecContext(ctx, sqlQuery, classId)
-	if err != nil {
-		log.Errorf("Error deleting class: %v", err)
-		return err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		log.Errorf("Error committing transaction: %v", err)
-		return err
-	}
-
-	log.Infof("ClassiD with ID %s deleted successfully", classId)
-	return nil
-}
-
-func (c *classManagementStore) GetAllSessionsByCourseIdStore(courseId string, ctx context.Context) ([]course_class.ClassEntity, error) {
-	log.Infof("Get all sessions for course %s", courseId)
-	sqlQuery := "SELECT * FROM CLASS WHERE COURSE_ID = ?"
-
-	var rs []course_class.ClassEntity
-	err := c.db.SelectContext(ctx, &rs, sqlQuery, courseId)
-	if err != nil {
-		log.WithError(err).Errorf("Failed to get sessions for course %s from the database", courseId)
-		return nil, err
-	}
-	return rs, nil
-}
-
-func (c *classManagementStore) FixCourseInformationStore(rq api_request.ModifyCourseInformation, ctx context.Context) error {
-	log.Infof("Fix course information %v", rq)
-
-	// Begin a transaction
-	tx, err := c.db.BeginTx(ctx, nil)
-	if err != nil {
-		log.WithError(err).Errorf("Error starting transaction for fix course information %s", rq.CourseId)
-		return err
-	}
-
-	// UPDATE IN COURSE TABLE
-	sqlQuery := "UPDATE COURSE SET MAIN_TEACHER = ?, ROOM = ? WHERE COURSE_ID = ?"
-
-	_, err = tx.ExecContext(ctx, sqlQuery, rq.Teacher, rq.Room, rq.CourseId)
-	if err != nil {
-		// Rollback the transaction if an error occurs
-		tx.Rollback()
-		log.WithError(err).Errorf("Error fix course %s information on TABLE COURSE", rq.CourseId)
-		return err
-	}
-
-	// UPDATE IN CLASS TABLE
-	sqlQuery = "UPDATE CLASS SET ROOM = ? WHERE COURSE_ID = ?"
-	_, err = tx.ExecContext(ctx, sqlQuery, rq.Room, rq.CourseId)
-	if err != nil {
-		// Rollback the transaction if an error occurs
-		tx.Rollback()
-		log.WithError(err).Errorf("Error fix course %s information on TABLE CLASS", rq.CourseId)
-		return err
-	}
-
-	// Commit the transaction if everything is successful
-	err = tx.Commit()
-	if err != nil {
-		// Handle commit error if needed
-		log.WithError(err).Errorf("Error committing transaction for course information update")
-		return err
-	}
-
-	log.Infof("Successful update course information")
-	return nil
-
-}
-
-func (c *classManagementStore) AddNoteStore(noteRequest api_request.AddNoteRequest, add []string, delete []string, ctx context.Context) error {
-	log.Infof("Start add note store for class %s", noteRequest.ClassId)
-	// Begin a transaction
-	tx, err := c.db.BeginTx(ctx, nil)
-	if err != nil {
-		log.WithError(err).Errorf("Error starting transaction for note class information %s", noteRequest)
-		return err
-	}
-
-	// UPDATE IN COURSE TABLE
-	sqlQuery := "UPDATE CLASS SET START_TIME = ?, END_TIME = ?, DATE = ?, ROOM = ?, NOTE = ? WHERE CLASS_ID = ?"
-
-	_, err = tx.ExecContext(ctx, sqlQuery, noteRequest.StartTime, noteRequest.EndTime, noteRequest.Date, noteRequest.Room, noteRequest.Note, noteRequest.ClassId)
-	if err != nil {
-		// Rollback the transaction if an error occurs
-		tx.Rollback()
-		log.WithError(err).Errorf("Error starting transaction for note class information %s", noteRequest)
-		return err
-	}
-
-	sqlQuery = "INSERT INTO CLASS_MANAGER (USER_ID, COURSE_ID, CLASS_ROLE) VALUES (?, ?, ?)"
-
-	for _, v := range add {
-		_, err = tx.ExecContext(ctx, sqlQuery, v, noteRequest.ClassId, "TA")
-		if err != nil {
-			// Rollback the transaction if an error occurs
-			tx.Rollback()
-			log.WithError(err).Errorf("Error starting transaction for note class information %s", noteRequest)
-			return err
-		}
-	}
-
-	sqlQuery = "DELETE FROM CLASS_MANAGER WHERE USER_ID = ? AND COURSE_ID = ?"
-
-	for _, v := range delete {
-		_, err = tx.ExecContext(ctx, sqlQuery, v, noteRequest.ClassId)
-		if err != nil {
-			// Rollback the transaction if an error occurs
-			tx.Rollback()
-			log.WithError(err).Errorf("Error starting transaction for note class information %s", noteRequest)
-			return err
-		}
-	}
-
-	// Commit the transaction if everything is successful
-	err = tx.Commit()
-	if err != nil {
-		// Handle commit error if needed
-		log.WithError(err).Errorf("Error committing transaction for note class information")
-		return err
-	}
-
-	log.Infof("Successful update note class information")
-	return nil
-
-}
-
-func (c *classManagementStore) GetTaListInSessionStore(classId int, ctx context.Context) ([]string, error) {
-	log.Infof("Start get TA List store for class %s", classId)
-
-	sqlQuery := "SELECT CM.USER_ID FROM CLASS_MANAGER CM JOIN USER U ON CM.USER_ID = U.USER_ID WHERE CM.COURSE_ID = ? AND U.JOB_POSITION = 'TA'"
-	var entities []string
-	err := c.db.SelectContext(ctx, &entities, sqlQuery, classId)
-
-	if err != nil {
-		log.WithError(err).Errorf("Failed to retrieve courses from the database")
-		return nil, err
-	}
-
-	return entities, nil
-}
-
-func (c *classManagementStore) GetCheckInHistoryByCourseIdStore(courseId string, ctx context.Context) ([]course_class.CheckInHistoryEntity, error) {
-	log.Infof("Start get check in history List store for course %s", courseId)
-
-	var entities []course_class.CheckInHistoryEntity
-	sqlQuery := "SELECT A.USER_ID, A.CLASS_NAME, A.CHECKIN_TIME, A.STATUS FROM ATTENDANCE_HISTORY A JOIN CLASS C ON A.CLASS_NAME = C.CLASS_ID WHERE C.COURSE_ID = ?"
-	args := []interface{}{courseId}
-
-	rows, err := c.db.QueryxContext(ctx, sqlQuery, args...)
-	if err != nil {
-		log.WithError(err).Errorf("Cannot get check in history from the database for course: %s", courseId)
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		var entity course_class.CheckInHistoryEntity
-		if err := rows.Scan(&entity.UserId, &entity.ClassId, &entity.CheckInTime, &entity.Status); err != nil {
-			log.WithError(err).Errorf("Error scanning row: %s", err.Error())
-			return nil, err
-		}
-		entities = append(entities, entity)
-	}
-
-	if err := rows.Err(); err != nil {
-		log.WithError(err).Errorf("Error iterating rows: %s", err.Error())
-		return nil, err
-	}
-	return entities, nil
-}
-
-func (c *classManagementStore) AddSubClassStore(rq api_request.NewSubClassRequest, ctx context.Context) error {
-	log.Infof("Start to add new sub class for course %s", rq.CourseId)
-	tx, err := c.db.BeginTx(ctx, nil)
-	if err != nil {
-		log.Errorf("Error starting transaction: %v", err)
-		return err
-	}
-
-	sqlQuery := "INSERT INTO CLASS (COURSE_ID, START_TIME, END_TIME, DATE, ROOM, TYPE_CLASS) VALUES (?, ?, ?, ?, ?, ?)"
-	result, err := tx.ExecContext(ctx, sqlQuery, rq.CourseId, rq.StartTime, rq.EndTime, rq.Date, rq.Room, "3")
+func executeSqlFile(db *sql.DB, request request.CreateSchemaRequest, tx *sqlx.Tx) error {
+	createSchemaSql := fmt.Sprintf("CREATE TABLE %s.BILL (BILL_ID SERIAL PRIMARY KEY, STATUS VARCHAR(50), PAYMENT_METHOD VARCHAR(50), BANK_ACCOUNT VARCHAR(100), REFUND_AMOUNT DECIMAL(10, 2));"+
+		"CREATE TABLE %s.BOOKING (BOOKING_ID SERIAL PRIMARY KEY, TICKET_TYPE_ID INT, SUB_EVENT_ID INT, BILL_ID INT, USER_ID INT, BOOKING_STATUS VARCHAR(50), CUSTOMER_EMAIL VARCHAR(100), CUSTOMER_NAME VARCHAR(100), CUSTOMER_PHONE_NUMBER VARCHAR(15), BOOKING_QUANTITY INT);"+
+		"CREATE TABLE %s.USER_MEMBERSHIP (USER_MEMBERSHIP_ID SERIAL PRIMARY KEY, USER_ID INT, MEMBERSHIP_RANK VARCHAR(50), POINTS INT);"+
+		"CREATE TABLE %s.USER (USER_ID SERIAL PRIMARY KEY, USER_FULL_NAME VARCHAR(100), USER_EMAIL VARCHAR(100), USER_PHONE_NUMBER VARCHAR(15), TENANT_ID INT, LOCATION VARCHAR(100), ROLE VARCHAR(50));",
+		request.CityId, request.CityId, request.CityId, request.CityId)
+
+	_, err := db.Exec(createSchemaSql)
 	if err != nil {
 		tx.Rollback()
-		log.Errorf("Error deleting class: %v", err)
+		log.WithError(err).Errorf("Failed to create table in schema in the database")
 		return err
 	}
 
-	lastInsertID, err := result.LastInsertId()
-	if err != nil {
-		tx.Rollback()
-		log.Errorf("Error getting last insert ID: %v", err)
-		return err
-	}
+	//createOwner := fmt.Sprintf("INSERT INTO %s.USER (USER_FULL_NAME, USER_PHONE_NUMBER, USER_EMAIL, TENANT_ID, LOCATION, ROLE) VALUES ($1, $2, $3, $4, $5, $6) RETURNING USER_ID",
+	//	request.UserFullName,
+	//	request.PhoneNumber,
+	//	request.Email,
+	//	request.CityId,
+	//	request.Location,
+	//	"USER")
 
-	sqlQuery = "INSERT INTO CLASS_MANAGER (USER_ID, COURSE_ID, CLASS_ROLE) VALUES (?, ?, ?)"
-	_, err = tx.ExecContext(ctx, sqlQuery, rq.TaId, lastInsertID, "TA")
-	if err != nil {
-		tx.Rollback()
-		log.Errorf("Error deleting class: %v", err)
-		return err
-	}
+	//var ownerID int
+	//err = db.QueryRow(createOwner, request.OwnerName, request.PhoneNumber, request.Email).Scan(&ownerID)
+	//if err != nil {
+	//	tx.Rollback()
+	//	log.WithError(err).Errorf("Failed to insert owner")
+	//	return err
+	//}
+	//insertTenatReference := fmt.Sprintf("INSERT INTO sport.TENANT_REFERENCE (TENANT_ID, TENANT_NAME, OWNER_ID) VALUES ($1, $2, $3)")
+	//_, err = db.Exec(insertTenatReference, ownerID, request.SchemaCode, ownerID)
+	//if err != nil {
+	//	tx.Rollback()
+	//	log.WithError(err).Errorf("Failed to insert tenant reference")
+	//	return err
+	//}
 
-	err = tx.Commit()
-	if err != nil {
-		tx.Rollback()
-		log.Errorf("Error committing transaction: %v", err)
-		return err
-	}
+	//log.Infof("New owner inserted with OWNER_ID: %d", ownerID)
 
-	log.Infof("Successfully insert sub class to course %s", rq.CourseId)
-	return nil
+	return err
 }
 
-func (c *classManagementStore) GetSubClassByCourseIdStore(courseId string, ctx context.Context) ([]course_class.SubClassEntity, error) {
-	log.Infof("Get all sub class detail for course: %s", courseId)
-	sqlQuery := "SELECT C.CLASS_ID, C.START_TIME, C.END_TIME, C.DATE, C.ROOM, C.NOTE, CM.USER_ID " +
-		"FROM CLASS C JOIN CLASS_MANAGER CM ON C.CLASS_ID = CM.COURSE_ID " +
-		"WHERE C.COURSE_ID = ? AND C.TYPE_CLASS = 3"
+func (c *classManagementStore) GetCityStore(ctx context.Context, cityId int) (string, error) {
+	log.Infof("Get city store")
 
-	var rs []course_class.SubClassEntity
-	err := c.db.SelectContext(ctx, &rs, sqlQuery, courseId)
-	if err != nil {
-		log.WithError(err).Errorf("Failed to get sub class for course %s from the database", courseId)
-		return nil, err
-	}
-	return rs, nil
-}
-
-func (c *classManagementStore) DeleteSubClassStore(rq string, ctx context.Context) error {
-	log.Infof("Start to delete sub class %s", rq)
-	tx, err := c.db.BeginTx(ctx, nil)
-	if err != nil {
-		log.Errorf("Error starting transaction: %v", err)
-		return err
-	}
-
-	sqlQuery := "DELETE FROM CLASS WHERE CLASS_ID = ?"
-	_, err = tx.ExecContext(ctx, sqlQuery, rq)
-	if err != nil {
-		tx.Rollback()
-		log.Errorf("Error deleting class: %v", err)
-		return err
-	}
-
-	sqlQuery = "DELETE FROM CLASS_MANAGER WHERE COURSE_ID = ?"
-	_, err = tx.ExecContext(ctx, sqlQuery, rq)
-	if err != nil {
-		tx.Rollback()
-		log.Errorf("Error deleting class: %v", err)
-		return err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		tx.Rollback()
-		log.Errorf("Error committing transaction: %v", err)
-		return err
-	}
-
-	log.Infof("Successfully delete sub class %s", rq)
-	return nil
-}
-
-func (c *classManagementStore) GetCourseInfoByCourseId(courseId string, ctx context.Context) (course_class.CourseEntity, error) {
-	log.Infof("Get course information by course id %s", courseId)
-
-	entity := course_class.CourseEntity{}
-	sqlQuery := "SELECT * FROM COURSE WHERE COURSE_ID = ?"
-	err := c.db.QueryRowxContext(ctx, sqlQuery, courseId).StructScan(&entity)
-	if err != nil {
-		log.WithError(err).Errorf("Failed to get course information from the database")
-		return entity, err
-	}
-
-	return entity, nil
-}
-
-func (c *classManagementStore) GetTotalStudentByCourseIdStore(courseId string, ctx context.Context) (*int, error) {
-	log.Infof("Get total student by course id %s", courseId)
-
-	var totalStudent int
-	sqlQuery := "SELECT COUNT(*) FROM COURSE_MANAGER WHERE COURSE_ID = ?"
-
-	err := c.db.QueryRowxContext(ctx, sqlQuery, courseId).Scan(&totalStudent)
-	if err != nil {
-		log.WithError(err).Errorf("Cannot find total student for course %s", courseId)
-		return nil, err
-	}
-
-	return &totalStudent, err
-}
-
-func (c *classManagementStore) GetCourseByYearStore(year string, ctx context.Context) ([]course_class.CourseEntity, error) {
-	log.Infof("Get course by year %s", year)
-
-	sqlQuery := "SELECT C.COURSE_ID, C.COURSE_TYPE_ID, COUNT(CM.STUDENT_ID) as TOTAL_STUDENT FROM COURSE C JOIN COURSE_MANAGER CM ON C.COURSE_ID = CM.COURSE_ID WHERE YEAR(C.START_DATE) = ? GROUP BY C.COURSE_ID, C.COURSE_TYPE_ID"
-	var entities []course_class.CourseEntity
-	err := c.db.SelectContext(ctx, &entities, sqlQuery, year)
+	sqlQuery := "SELECT public.CITY_NAME FROM CITY WHERE CITY_ID = ?"
+	var cityName string
+	err := c.db.GetContext(ctx, &cityName, sqlQuery, cityId)
 
 	if err != nil {
-		log.WithError(err).Errorf("Failed to retrieve courses from the database")
-		return nil, err
+		log.WithError(err).Errorf("Failed to retrieve city from the database")
+		return "", err
 	}
 
-	return entities, nil
-}
-
-func (c *classManagementStore) UpdateYearlyRevenueAndCourseRevenue(rq response.YearlyResponse, ctx context.Context) error {
-	log.Infof("Start to delete sub class %s", rq)
-	tx, err := c.db.BeginTx(ctx, nil)
-	if err != nil {
-		log.Errorf("Error starting transaction: %v", err)
-		return err
-	}
-
-	// Save yearly revenue first
-	sqlQuery := "INSERT INTO YEARLY_REVENUE (YEAR, TOTAL_REVENUE) VALUES (?, ?) ON DUPLICATE KEY UPDATE TOTAL_REVENUE = (?)"
-	_, err = tx.ExecContext(ctx, sqlQuery, rq.Year, rq.TotalYearlyRevenue, rq.TotalYearlyRevenue)
-	if err != nil {
-		tx.Rollback()
-		log.Errorf("Error update yearly revenue: %v", err)
-		return err
-	}
-
-	sqlQuery = "INSERT INTO COURSE_REVENUE (COURSE_ID, REVENUE) VALUES (?, ?) ON DUPLICATE KEY UPDATE REVENUE = (?)"
-	for _, v := range rq.CourseFeeResponses {
-		_, err = tx.ExecContext(ctx, sqlQuery, v.CourseID, v.Revenue, v.Revenue)
-		if err != nil {
-			tx.Rollback()
-			log.Errorf("Error update course revenue: %v", err)
-			return err
-		}
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		tx.Rollback()
-		log.Errorf("Error committing transaction: %v", err)
-		return err
-	}
-
-	log.Infof("Successfully delete sub class %s", rq)
-	return nil
+	return cityName, nil
 }

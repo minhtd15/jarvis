@@ -1,0 +1,80 @@
+@startuml
+actor user as u
+database db as d
+
+== Booking ==
+u -> system: validate and verify user information
+database db as d
+
+system -> d: get user information
+activate d
+d --> system: return user information
+deactivate d
+alt user allowed to book
+queue rabbitMq as rabbitMq
+actor FinanceDepartment as f
+    system -> system: validate user information
+    u -> system: send event selection information
+    system -> d: query event information
+    activate d
+    d --> system: return event information
+    deactivate d
+    system --> u: return event information
+    u -> system: send ticket selection
+    activate system
+    system -> d: query ticket availability
+    activate d
+    d --> system: return ticket availability
+    deactivate d
+    system -> system: validate ticket availability
+    alt ticket available
+        system --> u: return ticket availability
+        u -> system: send ticket booking
+        activate system
+        system -> d: update ticket reservation status = PAYMENT_WAITING, booking status to PENDING
+        activate d
+        d --> system: return ticket reservation status
+        deactivate d
+        rabbitMq -> f: send event to check user payment status
+        system --> u: return ticket in PAYMENT_WAITING status
+        deactivate system
+    else ticket not available
+        system --> u: return TICKET NOT AVAILABLE
+    deactivate system
+    end
+
+else user prohibited to book
+    system --> u: return NOT ALLOWED
+end
+== Ticket payment ==
+f -> f: validate ticket payment expiration
+f --> rabbitMq: return user payment status
+rabbitMq --> system: update ticket reservation status
+alt ticket payment status NOT EXPIRED
+    system -> d: update ticket reservation status = PAYMENT_SUCCESS
+    activate d
+    d --> system: return ticket reservation status = PAYMENT_SUCCESS
+    deactivate d
+    system -> rabbitMq: send event to send bill and ticket QR code
+    system --> u: return ticket in PAYMENT_SUCCESS status
+else ticket payment status EXPIRED
+    system -> d: update ticket reservation status = PAYMENT_EXPIRED, booking status to DECLINED
+    activate d
+    d --> system: return ticket reservation status
+    deactivate d
+    system --> u: return ticket in PAYMENT_EXPIRED status
+end
+== Send Email Confirmation ==
+rabbitMq --> system: send event to send email confirmation
+system -> d: get user payment status
+activate d
+d --> system: return user payment status
+deactivate d
+alt payment status = PAYMENT_SUCCESS
+    system -> system: send email confirmation
+    system -> d: FINISHED
+    system --> u: return EMAIL SENT
+else payment status = PAYMENT_EXPIRED
+    system --> u: return EMAIL NOT SENT, please request to send again
+end
+@enduml

@@ -1,13 +1,13 @@
 package api
 
 import (
-	"context"
+	"bytes"
 	api_request "education-website/api/request"
 	api_response "education-website/api/response"
 	"education-website/entity/user"
-	user2 "education-website/service/user"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/apm"
@@ -99,187 +99,76 @@ func handlerLoginUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleSendEmailForgotPassword(w http.ResponseWriter, r *http.Request) {
+func handlerLogin(w http.ResponseWriter, r *http.Request) {
 	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle forgot password")
-	logger.Infof("Handle forgot password")
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handleLogin")
+	logger.Infof("Handle login WSO2")
 
-	bodyBytes, err := ioutil.ReadAll(r.Body)
+	// Lấy mã xác thực từ truy vấn
+	// Lấy thông tin đăng nhập từ yêu cầu HTTP
+	username := r.FormValue("username")
+	password := r.FormValue("password")
+
+	// Kiểm tra xem người dùng đã gửi đủ thông tin đăng nhập chưa
+	if username == "" || password == "" {
+		http.Error(w, "Missing username or password", http.StatusBadRequest)
+		return
+	}
+
+	// Cấu hình Client ID và Client Secret từ WSO2
+	clientID := "<YourClientID>"
+	clientSecret := "<YourClientSecret>"
+
+	// Tạo Basic Auth Header từ ClientID và ClientSecret
+	auth := base64.StdEncoding.EncodeToString([]byte(clientID + ":" + clientSecret))
+
+	// Tạo dữ liệu yêu cầu POST để lấy token
+	data := url.Values{}
+	data.Set("grant_type", "password")
+	data.Set("username", username)
+	data.Set("password", password)
+	data.Set("scope", "openid")
+
+	// Gửi yêu cầu POST tới WSO2 để lấy token
+	tokenURL := "https://<API_GATEWAY_URL>/oauth2/token"
+	req, err := http.NewRequest("POST", tokenURL, bytes.NewBufferString(data.Encode()))
 	if err != nil {
-		log.WithError(err).Warningf("Error when reading from request")
-		http.Error(w, "Invalid format", 252001)
+		logger.Errorf("Error creating request: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	json.NewDecoder(r.Body)
-	defer r.Body.Close()
+	// Đặt header cho yêu cầu
+	req.Header.Set("Authorization", "Basic "+auth)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	// this is the information that the user type in front end
-	var userRequest api_request.ForgotPasswordRequest
-	err = json.Unmarshal(bodyBytes, &userRequest)
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
-		log.WithError(err).Warningf("Error when unmarshaling data from request")
-		http.Error(w, "Status internal Request", http.StatusInternalServerError) // Return a internal server error
+		logger.Errorf("Error sending request to WSO2: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+	defer resp.Body.Close()
 
-	email := userRequest.Email
-
-	checkEmailExistence, err := userService.CheckEmailExistenceService(email, ctx)
-	if err != nil || !checkEmailExistence {
-		log.WithError(err).Errorf("Email probably not existed %s", email)
-		http.Error(w, "Email not existed, please create new account", http.StatusBadRequest)
-		return
-	}
-
-	// update a digit code to db
-	digitCode, err := userService.PostNewForgotPasswordCode(email, ctx)
+	// Đọc phản hồi từ WSO2
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.WithError(err).Errorf("Cannot update digi code to db", email)
-		http.Error(w, "Cannot update digi code to db", http.StatusBadRequest)
+		logger.Errorf("Error reading response: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	// send the digit code to the email
-	user2.SendDailyEmail(email, *digitCode)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode("Success send digit code to email")
-
-}
-
-func handleCheckDigitCodeForgotPassword(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handle forgot password")
-	logger.Infof("Handle forgot password to check digit code")
-
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.WithError(err).Warningf("Error when reading from request")
-		http.Error(w, "Invalid format", 252001)
+	// Kiểm tra mã trạng thái của phản hồi
+	if resp.StatusCode != http.StatusOK {
+		logger.Errorf("Failed to get token: %s", body)
+		http.Error(w, "Failed to get token from WSO2", http.StatusUnauthorized)
 		return
 	}
 
-	json.NewDecoder(r.Body)
-	defer r.Body.Close()
-
-	// this is the information that the user type in front end
-	var userRequest api_request.CheckDigitCode
-	err = json.Unmarshal(bodyBytes, &userRequest)
-	if err != nil {
-		log.WithError(err).Warningf("Error when unmarshaling data from request")
-		http.Error(w, "Status internal Request", http.StatusInternalServerError) // Return a internal server error
-		return
-	}
-
-	code := userRequest.DigitCode
-	email := userRequest.Email
-
-	check, err := userService.CheckFitDigitCode(email, code, ctx)
-	if err != nil {
-		log.WithError(err).Errorf("unable to check on db digit code")
-		http.Error(w, "Unable to check on db digit code", http.StatusBadRequest)
-		return
-	}
-
-	if !*check {
-		log.WithError(err).Errorf("Wrong code")
-		http.Error(w, "Wrong code", http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode("Success send verify digit code")
-}
-
-func handleSetNewPassword(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handleRetryUserAccount")
-	logger.Infof("Handle user account")
-
-	bodyBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.WithError(err).Warningf("Error when reading from request")
-		http.Error(w, "Invalid format", 252001)
-		return
-	}
-
-	json.NewDecoder(r.Body)
-	defer r.Body.Close()
-
-	var newPasswordRequest api_request.NewPasswordRequest
-	err = json.Unmarshal(bodyBytes, &newPasswordRequest)
-	if err != nil {
-		log.WithError(err).Warningf("Error when unmarshaling data from request")
-		http.Error(w, "Status internal Request", http.StatusInternalServerError) // Return a internal server error
-		return
-	}
-
-	userInfo, err := userService.UpdateNewPasswordInfo(newPasswordRequest.NewPassword, newPasswordRequest.Email, ctx)
-	if err != nil {
-		log.WithError(err).Warningf("Error when insert new password data from request")
-		http.Error(w, "Status internal Request", http.StatusInternalServerError) // Return a internal server error
-		return
-	}
-
-	generatedToken := jwtService.GenerateToken(user.UserEntity{
-		UserId:       userInfo.UserId,
-		UserName:     userInfo.UserName,
-		FullName:     userInfo.FullName,
-		Role:         userInfo.Role,
-		DOB:          userInfo.DOB,
-		JobPosition:  userInfo.JobPosition,
-		StartingDate: userInfo.StartingDate,
-	})
-
-	userInfoWithToken := map[string]interface{}{
-		"user": api_response.UserDto{
-			UserId:       userInfo.UserId,
-			UserName:     userInfo.UserName,
-			Email:        newPasswordRequest.Email,
-			Role:         userInfo.Role,
-			DOB:          userInfo.DOB,
-			JobPosition:  userInfo.JobPosition,
-			StartingDate: userInfo.StartingDate,
-		},
-		"token": generatedToken,
-	}
-
-	response := map[string]interface{}{
-		"message": "Đăng nhập thành công",
-		"data":    userInfoWithToken,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
-
-func handleGetStudentPaymentStatusByCourseId(w http.ResponseWriter, r *http.Request) {
-	ctx := apm.DetachedContext(r.Context())
-	logger := GetLoggerWithContext(ctx).WithField("METHOD GET", "get student payment status by course Id")
-	logger.Infof("this API is used to get student payment status by course Id")
-
-	keys := r.URL.Query()
-	courseId := keys.Get("courseId")
-
-	rs, err := userService.GetStudentPaymentStatusByCourseIdService(courseId, ctx)
-	if err != nil {
-		log.Errorf("Unable to get student payment status by course Id: %s; err : %v", courseId, err)
-		http.Error(w, "Unable to get student payment status by course Id", http.StatusInternalServerError)
-		return
-	}
-
-	response := map[string]interface{}{
-		"message": "Successful getting student payment status by course Id",
-		"data":    rs,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	// Hiển thị token cho người dùng (bạn có thể lưu trữ token và sử dụng nó cho các API khác)
+	logger.Infof("Successfully obtained token: %s", body)
+	w.Write(body) // Gửi token về cho người dùng
 }
 
 func loginViaThirdParty(w http.ResponseWriter, r *http.Request) {
@@ -294,19 +183,36 @@ func loginViaThirdParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auth0Domain := "dev-5wpln5bbc476iydk.us.auth0.com"
-	clientID := "wDIUqMHxB4XxNDzOUbhtDO66Qd72kJ8a"
+	clientID := "Bw0g06uSGL317MdJHyjSsU39930a"      // Consumer Key từ WSO2 Developer Portal
+	redirectURI := "http://localhost:4200/callback" // URI mà người dùng sẽ được chuyển hướng sau khi xác thực thành công
+	scope := "openid"                               // Các quyền mà bạn yêu cầu
+	authURL := fmt.Sprintf("https://localhost:9443/oauth2/authorize?response_type=code&client_id=%s&redirect_uri=%s&scope=%s&state=%s",
+		clientID, redirectURI, scope, state)
+
+	//auth0Domain := "dev-5wpln5bbc476iydk.us.auth0.com"
+	//clientID := "wDIUqMHxB4XxNDzOUbhtDO66Qd72kJ8a"
 	//redirectURI := "http://localhost:8081/e/v1/callback"
-	redirectURI := "http://localhost:3031/crm-tiw/loading"
-	loginURL := "https://" + auth0Domain + "/authorize" +
-		"?response_type=code" +
-		"&client_id=" + clientID +
-		"&redirect_uri=" + redirectURI +
-		"&scope=openid profile email" +
-		"&state=" + state
+	//redirectURI := "http://localhost:3031/crm-tiw/loading"
+	//loginURL := "https://" + auth0Domain + "/authorize" +
+	//	"?response_type=code" +
+	//	"&client_id=" + clientID +
+	//	"&redirect_uri=" + redirectURI +
+	//	"&scope=openid profile email" +
+	//	"&state=" + state
 
 	// Thực hiện chuyển hướng
-	http.Redirect(w, r, loginURL, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
+}
+
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")                   // Cho phép từ miền của bạn
+	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS") // Các phương thức được phép
+	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type")       // Các header cần thiết
+}
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	// Phần còn lại của mã
 }
 
 func generateState() (string, error) {
@@ -321,13 +227,29 @@ func generateState() (string, error) {
 }
 
 func handleCallback(w http.ResponseWriter, r *http.Request) {
-
 	// Lấy mã xác thực từ truy vấn
-	authorizationCode := r.URL.Query().Get("code")
-	log.Infof("Authorization code: %s", authorizationCode)
-	//role := r.URL.Query().Get("role")
+	var requestData struct {
+		Code string `json:"code"`
+	}
 
-	// Thực hiện giao dịch mã xác thực để nhận mã thông báo từ Auth0
+	// Giải mã dữ liệu JSON từ body
+	err := json.NewDecoder(r.Body).Decode(&requestData)
+	if err != nil {
+		log.WithError(err).Error("Failed to decode request body")
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	authorizationCode := requestData.Code
+	if authorizationCode == "" {
+		log.Error("Authorization code is missing")
+		http.Error(w, "Authorization code is missing", http.StatusBadRequest)
+		return
+	}
+
+	log.Infof("Authorization code: %s", authorizationCode)
+
+	// Gọi hàm để trao đổi mã xác thực với Auth0 lấy token
 	response, err := exchangeAuthCode(authorizationCode)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to exchange authorization code for tokens: %s", err)
@@ -343,18 +265,18 @@ func handleCallback(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func exchangeAuthCode(code string) (map[string]interface{}, error) {
+func exchangeAuthCode(code string) (*string, error) {
 	// Cấu trúc yêu cầu trao đổi mã xác thực
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
-	data.Set("client_id", "wDIUqMHxB4XxNDzOUbhtDO66Qd72kJ8a")
-	data.Set("client_secret", "ts5cjzjMmPIvxytIjeBCeW88Re8HRdFL-A9w1PPQ2SxHyUiXVtHNsAacRGNOehd7")
+	data.Set("client_id", "Bw0g06uSGL317MdJHyjSsU39930a")
+	data.Set("client_secret", "EPzKR3eoLr1HfPyir1lCAi2AaPsa")
 	data.Set("code", code)
-	data.Set("redirect_uri", "http://localhost:3031/crm-tiw/loading")
+	data.Set("redirect_uri", "http://localhost:4200/callback")
 
-	// Gửi yêu cầu POST đến Auth0 để trao đổi mã xác thực
-	resp, err := http.PostForm("https://dev-5wpln5bbc476iydk.us.auth0.com/oauth/token", data)
+	// Gửi yêu cầu POST đến WSO2 để trao đổi mã xác thực
 
+	resp, err := http.PostForm("https://localhost:9443/oauth2/token", data)
 	if err != nil {
 		return nil, err
 	}
@@ -382,80 +304,5 @@ func exchangeAuthCode(code string) (map[string]interface{}, error) {
 	}
 	log.Infof("Nickname: %s", nickname)
 
-	// get role from token
-	//role := getRoleByAuthManagementAPI()
-	//log.Infof("Role: %s", role)
-
-	// get user other information on database
-	userInfo, err := userService.GetByNicknameService(nickname, context.Context(context.Background()))
-	if err != nil {
-		log.WithError(err).Errorf("Failed to get user information by nickname: %s", err)
-		return nil, err
-	}
-
-	generatedToken := jwtService.GenerateToken(user.UserEntity{
-		UserId:   userInfo.UserId,
-		UserName: userInfo.UserName,
-		FullName: userInfo.FullName,
-		Role:     userInfo.Role,
-	})
-
-	userInfoWithToken := map[string]interface{}{
-		"user": api_response.UserDto{
-			UserId:      userInfo.UserId,
-			UserName:    userInfo.UserName,
-			FullName:    userInfo.FullName,
-			Email:       userInfo.Email,
-			Role:        userInfo.Role,
-			DOB:         userInfo.DOB,
-			JobPosition: userInfo.JobPosition,
-		},
-		"token": generatedToken,
-	}
-
-	return userInfoWithToken, nil
+	return nil, nil
 }
-
-//func getRoleByAuthManagementAPI() string {
-//	// Get these from your Auth0 Application Dashboard.
-//	// The application needs to be a Machine To Machine authorized
-//	// to request access tokens for the Auth0 Management API,
-//	// with the desired permissions (scopes).
-//	domain := "dev-5wpln5bbc476iydk.us.auth0.com"
-//	clientID := "c3ySkmVVxNqrCx72z5eSKUXu039hA0Br"
-//	clientSecret := "o7vRruLQ_BQWV9g5LEyfdkWfBYmX-BRFvhXL_tlbWxsX-g1-q2TyjOCAks8RU24W"
-//
-//	// Initialize a new client using a domain, client ID and client secret.
-//	// Alternatively you can specify an access token:
-//	// `management.WithStaticToken("token")`
-//	auth0API, err := management.New(
-//		domain,
-//		management.WithClientCredentials(context.TODO(), clientID, clientSecret), // Replace with a Context that better suits your usage
-//	)
-//	if err != nil {
-//		log.Fatalf("failed to initialize the auth0 management API client: %+v", err)
-//	}
-//
-//	// Now we can interact with the Auth0 Management API.
-//	// Example: Creating a new client.
-//	client := &management.Client{
-//		Name:        auth0.String("My Client"),
-//		Description: auth0.String("Client created through the Go SDK"),
-//	}
-//
-//	// The passed in client will get hydrated with the response.
-//	// This means that after this request, we will have access
-//	// to the client ID on the same client object.
-//	err = auth0API.Client.Create(context.TODO(), client) // Replace with a Context that better suits your usage
-//	if err != nil {
-//		log.Fatalf("failed to create a new client: %+v", err)
-//	}
-//
-//	// Make use of the getter functions to safely access
-//	// fields without causing a panic due nil pointers.
-//	log.Printf(
-//		"Created an auth0 client successfully. The ID is: %q",
-//		client.GetClientID(),
-//	)
-//	return client.GetClientID()
-//}

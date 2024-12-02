@@ -4,7 +4,6 @@ import (
 	"context"
 	"education-website/api"
 	"education-website/client"
-	"education-website/rabbitmq"
 	authService2 "education-website/service/authService"
 	"education-website/service/courseClass"
 	"education-website/service/user"
@@ -13,6 +12,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"os"
@@ -102,11 +102,11 @@ func main() {
 	})
 	cfg.RedisClient = redisClient
 
-	go func() {
-		if err := rabbitmq.RabbitMqConsumer(redisClient, classService); err != nil {
-			log.Fatalf("Error running RabbitMQ consumer: %v", err)
-		}
-	}()
+	//go func() {
+	//	if err := rabbitmq.RabbitMqConsumer(redisClient, classService); err != nil {
+	//		log.Fatalf("Error running RabbitMQ consumer: %v", err)
+	//	}
+	//}()
 
 	log.Printf("Successful connect to database")
 	defer db.Close() // Close the database connection when finished
@@ -140,6 +140,7 @@ func InitDatabase(config api.Config) (*sqlx.DB, error) {
 
 	// Open a database connection
 	log.Info("Open a database connection")
+	//connectionString := "user=avnadmin password=AVNS_UiWf4Eh9vQU7u5b5R98 dbname=defaultdb sslmode=disable"
 	db, err := sqlx.Open("mysql", dsn)
 	if err != nil {
 		return nil, err

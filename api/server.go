@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"crypto/tls"
 	batman "education-website"
 	"education-website/client"
 	"encoding/json"
@@ -157,65 +158,34 @@ func ParseFlags() (string, error) {
 func NewRouter(config Config) http.Handler {
 	// Create router and define routes and return that router
 	r := mux.NewRouter()
-	r.Use(AuthMiddleware())
+	//r.Use(AuthMiddleware())
+	//r.Use(TenantMiddleware)
 
 	// APIs that require token
 	internalRouter := r.PathPrefix("/i/v1").Subrouter()
 	internalRouter.HandleFunc("/user-verification", handlerUserAccount).Methods(http.MethodPost)
 	internalRouter.HandleFunc("/change-password", handleChangePassword).Methods(http.MethodPut)
-	internalRouter.HandleFunc("/salary-info", handlerSalaryInformation).Methods(http.MethodGet)
-	internalRouter.HandleFunc("/modify-salary-configuration", handleModifySalaryConfiguration).Methods(http.MethodPut)
-	internalRouter.HandleFunc("/new-course", handleInsertNewClass).Methods(http.MethodPost)
-	internalRouter.HandleFunc("/insert-students", handleInsertStudents).Methods(http.MethodPost)
-	internalRouter.HandleFunc("/user-schedule", handleClassFromToDateById).Methods(http.MethodGet)
-	internalRouter.HandleFunc("/modify-user-info", handleModifyUserInformation).Methods(http.MethodPut)
-	internalRouter.HandleFunc("/check-in-class", handleCheckInAttendanceClass).Methods(http.MethodPost)
-	internalRouter.HandleFunc("/add-student", handleInsertOneNewStudent).Methods(http.MethodPost)
-	internalRouter.HandleFunc("/sort-role", handleGetUserByRole).Methods(http.MethodGet)
-	internalRouter.HandleFunc("/delete-course", handleDeleteCourse).Methods(http.MethodDelete)
-	//internalRouter.HandleFunc("/delete-user", handleDeleteUser).Methods(http.MethodDelete)
-	internalRouter.HandleFunc("/delete-class", handleDeleteSessionByClassIs).Methods(http.MethodDelete)
-	internalRouter.HandleFunc("/my-schedule", handleGetMySchedule).Methods(http.MethodGet)
-	internalRouter.HandleFunc("/fix-course-information", handleFixCourseInformation).Methods(http.MethodPut)
-	internalRouter.HandleFunc("/note", AddNoteByClassId).Methods(http.MethodPost)
-	internalRouter.HandleFunc("/check-in-history", handleGetCheckInWorkerHistory).Methods(http.MethodGet)
-	internalRouter.HandleFunc("/delete-student", handleDeleteStudent).Methods(http.MethodDelete)
-	internalRouter.HandleFunc("/fix-student-info", handleFixStudentInformation).Methods(http.MethodPut)
-	internalRouter.HandleFunc("/add-user-by-position", handleAddUserByPosition).Methods(http.MethodPost)
-	internalRouter.HandleFunc("/add-sub-class", handlePostSubClass).Methods(http.MethodPost)
-	internalRouter.HandleFunc("/delete-sub-class", handleDeleteSubClass).Methods(http.MethodDelete)
 
 	// api that requires to interact with Flash service
-	backendRouter := r.PathPrefix("/b/v1").Subrouter()
+	//backendRouter := r.PathPrefix("/b/v1").Subrouter()
 	//backendRouter.HandleFunc("/callback", handleCallback).Methods(http.MethodGet)
-	backendRouter.HandleFunc("/course-fee", handleGetAllAvailableCourseFee).Methods(http.MethodGet) // api is to get all the course fee correspond to each course, got to get from flash client
-	backendRouter.HandleFunc("/course-revenue", handleGetCourseRevenueByCourseId).Methods(http.MethodGet)
-	backendRouter.HandleFunc("/batman/goodbye", handleGetStudentPaymentStatusByCourseId).Methods(http.MethodGet) // api is used to get student payment status by course id, e.g: get list of course fee payment status of course id 1
-	backendRouter.HandleFunc("/company/revenue", handleGetCompanyRevenue).Methods(http.MethodGet)
-	backendRouter.HandleFunc("/receive-from-rabbit", handleReceiveFromRabbit).Methods(http.MethodGet)
 
 	// APIs that does not require token
-	externalRouter := r.PathPrefix("/e/v1").Subrouter()
+	externalRouter := r.PathPrefix("/e").Subrouter()
 
+	externalRouter.HandleFunc("/login-user", handlerLogin).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/login-third-party", loginViaThirdParty).Methods(http.MethodGet)
 	externalRouter.HandleFunc("/callback", handleCallback).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/login", handlerLoginUser).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/register", handlerRegisterUser).Methods(http.MethodPost)
-	externalRouter.HandleFunc("/excel-export", handleExcelSalary).Methods(http.MethodPost)
-	externalRouter.HandleFunc("/class-info", handleGetClassInformation).Methods(http.MethodGet)
-	externalRouter.HandleFunc("/all-courses", handleGetAllCourseInformation).Methods(http.MethodGet)
-	//internalRouter.HandleFunc("/class-information", handleGetClassInformation).Methods(http.MethodGet)
-	externalRouter.HandleFunc("/send-email", handleEmailJobs).Methods(http.MethodPost)
-	//externalRouter.HandleFunc("/send-daily-email", handleSendDailyEmail).Methods(http.MethodGet)
-	externalRouter.HandleFunc("/student-check-in", checkInStudentAttendance).Methods(http.MethodGet)
-	externalRouter.HandleFunc("/students", getStudentsByCourse).Methods(http.MethodGet)
-	externalRouter.HandleFunc("/check-attendance-student", handlePostStudentAttendance).Methods(http.MethodPost)
-	externalRouter.HandleFunc("/fix-attendance-status", updateStudentAttendanceStatus).Methods(http.MethodPut)
-	externalRouter.HandleFunc("/course-sessions", handleGetAllSessionsByCourseId).Methods(http.MethodGet)
-	externalRouter.HandleFunc("/forgot-password", handleSendEmailForgotPassword).Methods(http.MethodPost)
-	externalRouter.HandleFunc("/send-digit", handleCheckDigitCodeForgotPassword).Methods(http.MethodPost)
-	externalRouter.HandleFunc("/new-password", handleSetNewPassword).Methods(http.MethodPost)
-	externalRouter.HandleFunc("/get-sub-class", handleGetSubClass).Methods(http.MethodGet)
+
+	externalRouter.HandleFunc("/sports", handleGetSports).Methods(http.MethodGet)
+	externalRouter.HandleFunc("/upload-image", uploadImage).Methods(http.MethodPost)
+	externalRouter.HandleFunc("/create-schema", createSchema).Methods(http.MethodPost)
+	externalRouter.HandleFunc("/callback-oauth2", handleCallbackOAuth2).Methods(http.MethodGet)
+
+	// API FOR BOOKING TICKET PROJECT
+	externalRouter.HandleFunc("/queue", handleQueue).Methods(http.MethodGet)
 
 	// Serving static files from the "./static" directory
 	r.PathPrefix("/web/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir("dist"))))
@@ -226,7 +196,7 @@ func NewRouter(config Config) http.Handler {
 	//con.Start()
 
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"http://localhost:3031/crm-tiw"},
+		AllowedOrigins: []string{"http://localhost:4200"},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
 		AllowedHeaders: []string{"*"},
 	})
@@ -255,6 +225,9 @@ func (config Config) Run() {
 		ReadTimeout:  config.Server.Timeout.Read * time.Second,
 		WriteTimeout: config.Server.Timeout.Write * time.Second,
 		IdleTimeout:  config.Server.Timeout.Idle * time.Second,
+		TLSConfig: &tls.Config{
+			MinVersion: tls.VersionTLS13,
+		},
 	}
 
 	// Handle ctrl+c/ctrl+x interrupt
@@ -262,11 +235,15 @@ func (config Config) Run() {
 
 	// Alert the user that the server is starting
 	log.Printf("Server is starting on %s\n", server.Addr)
+	//serverCrt := "/Users/minhtong/go-server.crt"
+	//serverKey := "/Users/minhtong/go-server.key"
 
 	// Run the server on a new goroutine
+
 	go func() {
 		log.Infof("Before Listen and Serve")
 		if err := server.ListenAndServe(); err != nil {
+			//if err := server.ListenAndServeTLS(serverCrt, serverKey); err != nil {
 			if err == http.ErrServerClosed {
 				// Normal interrupt operation, ignore
 			} else {

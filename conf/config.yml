@@ -10,16 +10,31 @@ server:
 
 XApiKey: "akfndkwfnklswnmljkfnmswljkfnwjlkngfjwenj"
 database:
-    host: mysql-242e090-ducminhtong1510-d931.a.aivencloud.com
-    port: 21440
-    user: avnadmin
-    pass: AVNS_PRb_ApuInzGLCBw_ux7
-    dbName: defaultdb
+#    host: mysql-242e090-ducminhtong1510-d931.a.aivencloud.com
+#    port: 21440
+#    user: avnadmin
+#    pass: AVNS_PRb_ApuInzGLCBw_ux7
+#    dbName: defaultdb
+    host: localhost
+    port: 3306
+    user: root
+    pass: tongminh1510
+    dbName: EDUDBTEST
+
+    # postgresql
 #    host: localhost
-#    port: 3306
-#    user: root
-#    pass: tongminh1510
-#    dbName: EDUDBTEST
+#    port: 5432
+#    user: kong
+#    pass: kongpass
+#    dbName: kong
+
+#    postgresql aiven
+#    host: pg-2aaeaeca-ducminhtong1510-d931.b.aivencloud.com
+#    port: 21440
+#    user: avnadmin
+#    pass: AVNS_UiWf4Eh9vQU7u5b5R98
+#    dbName: defaultdb
+
 #  host: 10.96.210.203
 #  port: 3306
 #  user: fall2324w20g6
