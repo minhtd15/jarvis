@@ -186,6 +186,7 @@ func NewRouter(config Config) http.Handler {
 
 	// API FOR BOOKING TICKET PROJECT
 	externalRouter.HandleFunc("/queue", handleQueue).Methods(http.MethodGet)
+	externalRouter.HandleFunc("/pdf", handlePushFileToQueue).Methods(http.MethodPost)
 
 	// Serving static files from the "./static" directory
 	r.PathPrefix("/web/").Handler(http.StripPrefix("/web/", http.FileServer(http.Dir("dist"))))

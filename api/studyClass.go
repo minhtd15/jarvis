@@ -2,6 +2,7 @@ package api
 
 import (
 	api_request "education-website/api/request"
+	"education-website/api/response/qlda"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
@@ -208,4 +209,45 @@ func handleQueue(w http.ResponseWriter, r *http.Request) {
 		// Đợi 5 giây trước khi gửi cập nhật tiếp theo
 		time.Sleep(5 * time.Second)
 	}
+}
+
+func handlePushFileToQueue(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD POST", "push file to queue")
+	logger.Infof("this API is used to push file to queue")
+
+	// Kiểm tra phương thức
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Lấy file từ body request
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		logger.WithError(err).Warningf("Error retrieving file from request")
+		http.Error(w, "Error retrieving file from request", http.StatusBadRequest)
+		return
+	}
+
+	//fileData, err := io.ReadAll(file)
+	//if err != nil {
+	//	logger.WithError(err).Error("Error reading file data")
+	//	http.Error(w, "Error reading file data", http.StatusInternalServerError)
+	//	return
+	//}
+
+	defer file.Close()
+
+	// Push file to queue
+	//err = rabbitmq.RabbitMQPublisher(fileData, ctx)
+	//if err != nil {
+	//	log.WithError(err).Errorf("Error push file to queue")
+	//	http.Error(w, "Error push file to queue", http.StatusInternalServerError)
+	//	return
+	//}
+
+	// Phản hồi thành công
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(qlda.MockFinalMetadata())
 }

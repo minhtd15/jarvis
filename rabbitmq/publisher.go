@@ -1,11 +1,12 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
 	"github.com/streadway/amqp"
 )
 
-func RabbitMQPublisher() error {
+func RabbitMQPublisher(fileData []byte, ctx context.Context) error {
 	fmt.Println("RabbitMQPublisher")
 
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
@@ -44,7 +45,7 @@ func RabbitMQPublisher() error {
 		false,
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body:        []byte("Hello World"),
+			Body:        fileData,
 		},
 	)
 	fmt.Println("Successfully published message to RabbitMQ")
