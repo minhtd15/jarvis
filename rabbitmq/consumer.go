@@ -23,7 +23,7 @@ type Message struct {
 
 func RabbitMqConsumer(redisClient client.RedisClient, classService education_website.ClassService) error {
 	// Connect to RabbitMQ server
-	conn, err := amqp.Dial("amqp://guest:guest@35.200.240.181:5672/")
+	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	//conn, err := amqp.Dial("amqp://guest:guest@104.199.170.255:5672/")
 	//
 	if err != nil {
@@ -40,12 +40,12 @@ func RabbitMqConsumer(redisClient client.RedisClient, classService education_web
 
 	// Declare a queue
 	q, err := ch.QueueDeclare(
-		"queue", // Queue name
-		true,    // Durable
-		false,   // Delete when unused
-		false,   // Exclusive
-		false,   // No-wait
-		nil,     // Arguments
+		"receive", // Queue name
+		true,      // Durable
+		false,     // Delete when unused
+		false,     // Exclusive
+		false,     // No-wait
+		nil,       // Arguments
 	)
 	if err != nil {
 		return fmt.Errorf("failed to declare a queue: %v", err)
@@ -125,10 +125,5 @@ func handleMessageFromQueue(message []byte, redisClient client.RedisClient, clas
 	}
 
 	// save data into db
-	err = classService.UpdateYearlyRevenueAndCourseRevenue(rq, context.Background())
-	if err != nil {
-		log.WithError(err).Errorf("Error save yearly revenue to db")
-		return err
-	}
 	return err
 }

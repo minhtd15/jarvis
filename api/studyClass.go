@@ -2,7 +2,7 @@ package api
 
 import (
 	api_request "education-website/api/request"
-	"education-website/api/response/qlda"
+	"education-website/rabbitmq"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
@@ -230,24 +230,27 @@ func handlePushFileToQueue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//fileData, err := io.ReadAll(file)
-	//if err != nil {
-	//	logger.WithError(err).Error("Error reading file data")
-	//	http.Error(w, "Error reading file data", http.StatusInternalServerError)
-	//	return
-	//}
+	fileData, err := io.ReadAll(file)
+	if err != nil {
+		logger.WithError(err).Error("Error reading file data")
+		http.Error(w, "Error reading file data", http.StatusInternalServerError)
+		return
+	}
+
+	mimeType := http.DetectContentType(fileData)
+	logger.Infof("MIME type: %s", mimeType)
 
 	defer file.Close()
 
 	// Push file to queue
-	//err = rabbitmq.RabbitMQPublisher(fileData, ctx)
-	//if err != nil {
-	//	log.WithError(err).Errorf("Error push file to queue")
-	//	http.Error(w, "Error push file to queue", http.StatusInternalServerError)
-	//	return
-	//}
+	data, err := rabbitmq.RabbitMQPublisher(fileData, ctx, mimeType)
+	if err != nil {
+		log.WithError(err).Errorf("Error push file to queue")
+		http.Error(w, "Error push file to queue", http.StatusInternalServerError)
+		return
+	}
 
 	// Phản hồi thành công
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(qlda.MockFinalMetadata())
+	json.NewEncoder(w).Encode(&data)
 }
