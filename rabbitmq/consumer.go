@@ -40,12 +40,12 @@ func RabbitMqConsumer(redisClient client.RedisClient, classService education_web
 
 	// Declare a queue
 	q, err := ch.QueueDeclare(
-		"receive", // Queue name
-		true,      // Durable
-		false,     // Delete when unused
-		false,     // Exclusive
-		false,     // No-wait
-		nil,       // Arguments
+		"receive1", // Queue name
+		true,       // Durable
+		false,      // Delete when unused
+		false,      // Exclusive
+		false,      // No-wait
+		nil,        // Arguments
 	)
 	if err != nil {
 		return fmt.Errorf("failed to declare a queue: %v", err)
