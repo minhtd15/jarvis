@@ -75,3 +75,43 @@ type Table struct {
 	Content    string `json:"content"`
 	TableIndex int    `json:"table_index"`
 }
+
+type Hello struct {
+	Contents []struct {
+		Parts []struct {
+			Text       string `json:"text,omitempty"`
+			InlineData struct {
+				MimeType string `json:"mime_type"`
+				Data     string `json:"data"`
+			} `json:"inline_data,omitempty"`
+		} `json:"parts"`
+	} `json:"contents"`
+}
+
+type Gemini struct {
+	Contents []Content `json:"contents"`
+}
+
+type Content struct {
+	Parts []Parts `json:"parts"`
+}
+
+type Parts struct {
+	Text       string      `json:"text,omitempty"`
+	InlineData *InlineData `json:"inline_data,omitempty"`
+}
+
+type InlineData struct {
+	MimeType string `json:"mime_type,omitempty"`
+	Data     string `json:"data,omitempty"`
+}
+
+type Md_table struct {
+	Content    string `db:"content"`
+	TableIndex int    `db:"table_index"`
+}
+
+type ImageDb struct {
+	Name    string `db:"name"`
+	Content string `db:"content"`
+}

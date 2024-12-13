@@ -2,15 +2,20 @@ package api
 
 import (
 	api_request "education-website/api/request"
+	"education-website/api/response/qlda"
 	"education-website/rabbitmq"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	_ "github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
 	"go.elastic.co/apm"
 	"io"
+	"mime"
 	"net/http"
+	"path/filepath"
+	"strconv"
 	"time"
 )
 
@@ -255,4 +260,88 @@ func handlePushFileToQueue(w http.ResponseWriter, r *http.Request) {
 	// Phản hồi thành công
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(&data)
+}
+
+func handleGemini(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD POST", "push file to queue")
+	logger.Infof("this API is used to push file to queue")
+	vars := mux.Vars(r)
+	param := vars["param"]
+	// Use the param variable as needed
+	//fmt.Fprintf(w, "Received param: %s", param)
+	paramInt, err := strconv.Atoi(param)
+	if err != nil {
+		http.Error(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
+
+	var gemini qlda.Gemini
+	var content qlda.Content
+	var part qlda.Parts
+	part.Text = "Summarize this table"
+	content.Parts = append(content.Parts, part)
+
+	// GET TABLE
+	contentTable, err := classService.GetTableService(paramInt, ctx)
+	if err != nil {
+		http.Error(w, "Error getting table", http.StatusInternalServerError)
+		return
+	}
+
+	for _, table := range contentTable {
+		var part1 qlda.Parts
+		part1.Text = table.Content
+		content.Parts = append(content.Parts, part1)
+	}
+
+	gemini.Contents = append(gemini.Contents, content)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(gemini)
+}
+
+func handleGeminiImage(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD POST", "push file to queue")
+	logger.Infof("this API is used to push file to queue")
+	vars := mux.Vars(r)
+	param := vars["param"]
+	// Use the param variable as needed
+	//fmt.Fprintf(w, "Received param: %s", param)
+	paramInt, err := strconv.Atoi(param)
+	if err != nil {
+		http.Error(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
+
+	var gemini qlda.Gemini
+	var content qlda.Content
+	var part qlda.Parts
+	part.Text = "Summarize this image"
+	content.Parts = append(content.Parts, part)
+
+	// GET TABLE
+	contentTable, err := classService.GetImageService(paramInt, ctx)
+	if err != nil {
+		http.Error(w, "Error getting table", http.StatusInternalServerError)
+		return
+	}
+
+	for _, table := range contentTable {
+
+		inlineData := qlda.InlineData{
+			MimeType: mime.TypeByExtension(filepath.Ext(table.Name)),
+			Data:     table.Content,
+		}
+
+		parts := qlda.Parts{
+			InlineData: &inlineData,
+		}
+
+		content.Parts = append(content.Parts, parts)
+	}
+
+	gemini.Contents = append(gemini.Contents, content)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(gemini)
 }
