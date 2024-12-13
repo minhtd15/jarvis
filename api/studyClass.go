@@ -223,12 +223,14 @@ func handlePushFileToQueue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Lấy file từ body request
-	file, _, err := r.FormFile("file")
+	file, header, err := r.FormFile("file")
 	if err != nil {
 		logger.WithError(err).Warningf("Error retrieving file from request")
 		http.Error(w, "Error retrieving file from request", http.StatusBadRequest)
 		return
 	}
+
+	logger.Infof("MIME type, File name: %s", header.Filename)
 
 	fileData, err := io.ReadAll(file)
 	if err != nil {
@@ -243,7 +245,7 @@ func handlePushFileToQueue(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	// Push file to queue
-	data, err := rabbitmq.RabbitMQPublisher(fileData, ctx, mimeType)
+	data, err := rabbitmq.RabbitMQPublisher(fileData, ctx, mimeType, classService, header.Filename)
 	if err != nil {
 		log.WithError(err).Errorf("Error push file to queue")
 		http.Error(w, "Error push file to queue", http.StatusInternalServerError)
