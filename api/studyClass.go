@@ -250,7 +250,7 @@ func handlePushFileToQueue(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	// Push file to queue
-	data, err := rabbitmq.RabbitMQPublisher(fileData, ctx, mimeType, classService, header.Filename)
+	data, err, id := rabbitmq.RabbitMQPublisher(fileData, ctx, mimeType, classService, header.Filename)
 	if err != nil {
 		log.WithError(err).Errorf("Error push file to queue")
 		http.Error(w, "Error push file to queue", http.StatusInternalServerError)
@@ -259,7 +259,10 @@ func handlePushFileToQueue(w http.ResponseWriter, r *http.Request) {
 
 	// Phản hồi thành công
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(&data)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data": data,
+		"id":   id,
+	})
 }
 
 func handleGemini(w http.ResponseWriter, r *http.Request) {
@@ -328,7 +331,6 @@ func handleGeminiImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, table := range contentTable {
-
 		inlineData := qlda.InlineData{
 			MimeType: mime.TypeByExtension(filepath.Ext(table.Name)),
 			Data:     table.Content,
