@@ -4,7 +4,6 @@ import (
 	"context"
 	"education-website/api"
 	"education-website/client"
-	"education-website/rabbitmq"
 	authService2 "education-website/service/authService"
 	"education-website/service/courseClass"
 	"education-website/service/user"
@@ -103,11 +102,11 @@ func main() {
 	})
 	cfg.RedisClient = redisClient
 
-	go func() {
-		if err := rabbitmq.RabbitMqConsumer(redisClient, classService); err != nil {
-			log.Fatalf("Error running RabbitMQ consumer: %v", err)
-		}
-	}()
+	//go func() {
+	//	if err := rabbitmq.RabbitMqConsumer(redisClient, classService); err != nil {
+	//		log.Fatalf("Error running RabbitMQ consumer: %v", err)
+	//	}
+	//}()
 
 	log.Printf("Successful connect to database")
 	defer db.Close() // Close the database connection when finished
