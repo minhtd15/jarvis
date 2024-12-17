@@ -178,6 +178,7 @@ func NewRouter(config Config) http.Handler {
 	externalRouter.HandleFunc("/callback", handleCallback).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/login", handlerLoginUser).Methods(http.MethodPost)
 	externalRouter.HandleFunc("/register", handlerRegisterUser).Methods(http.MethodPost)
+	externalRouter.HandleFunc("/test", handleTest).Methods(http.MethodGet)
 
 	externalRouter.HandleFunc("/sports", handleGetSports).Methods(http.MethodGet)
 	externalRouter.HandleFunc("/upload-image", uploadImage).Methods(http.MethodPost)

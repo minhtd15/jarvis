@@ -13,6 +13,16 @@ import (
 	"time"
 )
 
+func handleTest(w http.ResponseWriter, r *http.Request) {
+	ctx := apm.DetachedContext(r.Context())
+	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handleTest")
+	logger.Infof("Handle test")
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode("Hello world")
+}
+
 func handlerRegisterUser(w http.ResponseWriter, r *http.Request) {
 	ctx := apm.DetachedContext(r.Context())
 	logger := GetLoggerWithContext(ctx).WithField("METHOD", "handleRetryUserAccount")
