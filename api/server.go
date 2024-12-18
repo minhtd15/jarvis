@@ -218,7 +218,7 @@ func (config Config) Run() {
 	// of an OS interrupt (defers the cancel just in case)
 	ctx, cancel := context.WithTimeout(
 		context.Background(),
-		config.Server.Timeout.Server,
+		1200*time.Second,
 	)
 	defer cancel()
 
