@@ -3,9 +3,9 @@ server:
   port: 8081
   timeout:
     server: "1200s"
-    read: "15s"
-    write: "10s"
-    idle: "5s"
+    read: "1200s"
+    write: "1200s"
+    idle: "1200s"
 
 
 XApiKey: "akfndkwfnklswnmljkfnmswljkfnwjlkngfjwenj"
