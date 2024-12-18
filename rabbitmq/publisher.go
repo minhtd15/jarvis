@@ -48,7 +48,7 @@ func RabbitMQPublisher(fileData []byte, ctx context.Context, fileType string, cl
 			"docx",
 			false,
 			false,
-			true,
+			false,
 			false,
 			nil,
 		)
