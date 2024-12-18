@@ -200,7 +200,7 @@ func NewRouter(config Config) http.Handler {
 	//con.Start()
 
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"http://localhost:4200"},
+		AllowedOrigins: []string{"http://localhost:5173"},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
 		AllowedHeaders: []string{"*"},
 	})
