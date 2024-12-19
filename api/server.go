@@ -226,8 +226,8 @@ func (config Config) Run() {
 	server := &http.Server{
 		Addr:         config.Server.Host + ":" + config.Server.Port,
 		Handler:      NewRouter(config),
-		WriteTimeout: 3 * time.Minute,
-		IdleTimeout:  3 * time.Minute,
+		WriteTimeout: 10 * time.Minute,
+		IdleTimeout:  10 * time.Minute,
 		TLSConfig: &tls.Config{
 			MinVersion: tls.VersionTLS13,
 		},
